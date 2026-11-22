@@ -8,6 +8,7 @@ class Enemy:
 	var cell: Vector2i
 	var home: Vector2i
 	var patrol_end: Vector2i
+	var hostile: bool = true
 
 	func _init(enemy_kind: EnemyKind, spawn: Vector2i) -> void:
 		kind = enemy_kind
@@ -19,7 +20,7 @@ class Enemy:
 const SIGHT_RADIUS := 7
 const CHASE_RADIUS := 6
 const CARDINALS: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]
-const FIXTURES := ["B", "F", "L"]
+const FIXTURES := ["B", "F", "L", "G", "W", "A"]
 
 var size: Vector2i
 var player: Vector2i
@@ -85,8 +86,13 @@ func take_turn(direction: Vector2i = Vector2i.ZERO) -> bool:
 	if not is_walkable(destination):
 		return false
 
+	var occupant: Enemy = enemy_at(destination)
+	if occupant != null and not occupant.hostile:
+		occupant.cell = player
+		occupant = null
+
 	turn += 1
-	encounter = enemy_at(destination)
+	encounter = occupant
 	if encounter == null:
 		player = destination
 		_advance_enemies()
@@ -124,22 +130,24 @@ func _advance_enemies() -> void:
 			continue
 
 		var goal: Vector2i = enemy.patrol_end if enemy.cell == enemy.home else enemy.home
-		if not safe_room.has_point(player) and enemy.cell.distance_squared_to(player) <= CHASE_RADIUS * CHASE_RADIUS:
+		if enemy.hostile and not safe_room.has_point(player) and enemy.cell.distance_squared_to(player) <= CHASE_RADIUS * CHASE_RADIUS:
 			if _has_line_of_sight(enemy.cell, player):
 				goal = player
 
-		var next: Vector2i = _step_toward(enemy.cell, goal)
+		var next: Vector2i = _step_toward(enemy.cell, goal, enemy.hostile)
 		if next == player:
 			encounter = enemy
 			return
 		enemy.cell = next
 
 
-func _step_toward(origin: Vector2i, goal: Vector2i) -> Vector2i:
+func _step_toward(origin: Vector2i, goal: Vector2i, hostile: bool) -> Vector2i:
 	var next: Vector2i = origin
 	var best_distance: int = origin.distance_squared_to(goal)
 	for direction: Vector2i in CARDINALS:
 		var step: Vector2i = origin + direction
+		if step == player and not hostile:
+			continue
 		var distance: int = step.distance_squared_to(goal)
 		if distance < best_distance and not safe_room.has_point(step) and terrain_at(step) != "D" and is_walkable(step) and enemy_at(step) == null:
 			next = step

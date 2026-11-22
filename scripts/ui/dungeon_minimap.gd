@@ -33,5 +33,6 @@ func _draw() -> void:
 
 	for enemy: DungeonFloor.Enemy in _floor.enemies:
 		if _floor.visible.has(enemy.cell):
-			draw_rect(Rect2(origin + Vector2(enemy.cell) * tile, Vector2.ONE * tile), ENEMY)
+			var color: Color = ENEMY if enemy.hostile else VISIBLE
+			draw_rect(Rect2(origin + Vector2(enemy.cell) * tile, Vector2.ONE * tile), color)
 	draw_rect(Rect2(origin + Vector2(_floor.player) * tile - Vector2.ONE, Vector2.ONE * (tile + 2)), PLAYER)

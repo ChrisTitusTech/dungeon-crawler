@@ -17,6 +17,9 @@ var refuge: DungeonFloor
 var refuge_door: Vector2i
 var party: Array[BattleRules.Fighter] = []
 var inventory: Dictionary[String, int] = {}
+var reputation: Dictionary[String, int] = {}
+var viewers: int = 0
+var sponsor_contracts: Dictionary[String, String] = {}
 var used_sites: Dictionary[Vector2i, bool] = {}
 var fallen_gear: Dictionary[Vector2i, Array] = {}
 var achievements := PackedStringArray()
@@ -41,6 +44,9 @@ func _init(floor_seed: int, layout_version: int = FloorOneGenerator.VERSION) -> 
 	refuge = DungeonFloor.new(REFUGE_LAYOUT.rows)
 	party = [CONTENT.make_fighter("rook"), CONTENT.make_fighter("mira")]
 	inventory = {"tonic": 4, "bandage": 2}
+	for faction: String in CONTENT.factions:
+		reputation[faction] = CONTENT.factions[faction].initial
+	_update_hostility()
 	event_occurred.connect(_on_show_event)
 	event_occurred.emit("intro")
 
@@ -85,11 +91,60 @@ func add_item(item: String, quantity: int = 1) -> void:
 	inventory[item] = count(item) + quantity
 
 
-func spend_item(item: String) -> void:
-	if count(item) > 1:
-		inventory[item] -= 1
+func spend_item(item: String, quantity: int = 1) -> void:
+	if count(item) > quantity:
+		inventory[item] -= quantity
 	else:
 		inventory.erase(item)
+
+
+func has_truce(faction: String) -> bool:
+	var definition: Dictionary = CONTENT.factions[faction]
+	return definition.has("truce") and reputation[faction] >= definition.truce
+
+
+func offer_faction_gift(faction: String) -> bool:
+	var definition: Dictionary = CONTENT.factions.get(faction, {})
+	if not at_camp() or not definition.has("gift") or has_truce(faction):
+		return false
+	if count(definition.gift) < definition.gift_cost:
+		return false
+	spend_item(definition.gift, definition.gift_cost)
+	_shift_reputation(faction, definition.gift_standing)
+	_update_hostility()
+	return true
+
+
+func can_craft(recipe_id: String) -> bool:
+	var recipe: Dictionary = CONTENT.recipes.get(recipe_id, {})
+	if not at_camp() or recipe.is_empty():
+		return false
+	for item: String in recipe.ingredients:
+		if count(item) < recipe.ingredients[item]:
+			return false
+	return true
+
+
+func craft(recipe_id: String) -> bool:
+	if not can_craft(recipe_id):
+		return false
+	var recipe: Dictionary = CONTENT.recipes[recipe_id]
+	for item: String in recipe.ingredients:
+		spend_item(item, recipe.ingredients[item])
+	add_item(recipe.item, recipe.count)
+	return true
+
+
+func can_accept_sponsor(sponsor: String) -> bool:
+	var definition: Dictionary = CONTENT.sponsors.get(sponsor, {})
+	return at_camp() and not definition.is_empty() and viewers >= definition.viewers and not sponsor_contracts.has(sponsor)
+
+
+func accept_sponsor(sponsor: String) -> bool:
+	if not can_accept_sponsor(sponsor):
+		return false
+	sponsor_contracts[sponsor] = "active"
+	return true
 
 
 func rest() -> void:
@@ -156,6 +211,7 @@ func collect_cache(cell: Vector2i) -> void:
 	used_sites[cell] = true
 	add_item("tonic", 2)
 	add_item("bandage")
+	add_item("bitterroot")
 	if posmod(cell.x, 3) == 0:
 		add_item("hide_coat")
 
@@ -175,7 +231,8 @@ func loot_gear(cell: Vector2i) -> void:
 	fallen_gear.erase(cell)
 
 
-func settle_battle(enemy: DungeonFloor.Enemy, outcome: BattleRules.Outcome, potions: int) -> void:
+func settle_battle(enemy: DungeonFloor.Enemy, outcome: BattleRules.Outcome, potions: int, used_skill: bool = false) -> void:
+	var used_tonic: bool = count("tonic") > potions
 	inventory.erase("tonic")
 	if potions > 0:
 		add_item("tonic", potions)
@@ -195,14 +252,22 @@ func settle_battle(enemy: DungeonFloor.Enemy, outcome: BattleRules.Outcome, poti
 		return
 
 	var reward: Dictionary = CONTENT.foes[ENEMY_IDS[enemy.kind]]
+	viewers += int(reward.viewers) + (5 if used_skill else 0)
+	if party.any(func(member: BattleRules.Fighter) -> bool: return member.hp > 0 and member.hp * 4 <= member.max_hp):
+		viewers += 6
 	for member: BattleRules.Fighter in party:
 		member.earn_experience(reward.xp)
 	add_item(reward.drop)
+	add_item(reward.material)
+	_shift_reputation(reward.faction, -8)
+	_shift_reputation(CONTENT.factions[reward.faction].rival, 4)
+	_update_hostility()
 	victories += 1
 	if victories == 1:
 		event_occurred.emit("first_blood")
 	elif victories == 3:
 		event_occurred.emit("three_wins")
+	_fulfill_sponsors(used_tonic, used_skill)
 	if enemy.kind == DungeonFloor.EnemyKind.BOSS:
 		boss_defeated = true
 		event_occurred.emit("warden")
@@ -234,6 +299,8 @@ func snapshot() -> Dictionary:
 		"layout_version": _layout_version, "in_refuge": _in_refuge, "refuge_player": refuge.player,
 		"enemies": enemies, "explored": floor.explored.keys(), "party": members,
 		"inventory": inventory.duplicate(), "used_sites": used_sites.duplicate(),
+		"reputation": reputation.duplicate(),
+		"viewers": viewers, "sponsor_contracts": sponsor_contracts.duplicate(),
 		"fallen_gear": fallen_gear.duplicate(true), "achievements": achievements.duplicate(),
 		"announcement": announcement, "announcement_event": _announcement_event, "victories": victories,
 		"boss_defeated": boss_defeated, "completed": completed,
@@ -255,6 +322,22 @@ static func restore(data: Dictionary) -> CampaignRun:
 	if not layout_version is int or layout_version not in [1, FloorOneGenerator.VERSION]:
 		return null
 	var run := CampaignRun.new(data.seed, layout_version)
+	var saved_viewers: Variant = data.get("viewers", 0)
+	var saved_contracts: Variant = data.get("sponsor_contracts", {})
+	if not saved_viewers is int or saved_viewers < 0 or not saved_contracts is Dictionary:
+		return null
+	run.viewers = saved_viewers
+	for sponsor: Variant in saved_contracts:
+		if not CONTENT.sponsors.has(sponsor) or saved_contracts[sponsor] not in ["active", "fulfilled"]:
+			return null
+		run.sponsor_contracts[sponsor] = saved_contracts[sponsor]
+	var standing: Variant = data.get("reputation", {})
+	if not standing is Dictionary:
+		return null
+	for faction: Variant in standing:
+		if not CONTENT.factions.has(faction) or not standing[faction] is int or absi(standing[faction]) > 100:
+			return null
+		run.reputation[faction] = standing[faction]
 	if not run.floor.is_walkable(data.player):
 		return null
 	var camp_state: Variant = data.get("in_refuge", layout_version == 1 and not data.completed)
@@ -314,6 +397,7 @@ static func restore(data: Dictionary) -> CampaignRun:
 	run.victories = data.victories
 	run.boss_defeated = data.boss_defeated
 	run.completed = data.completed
+	run._update_hostility()
 	return run
 
 
@@ -335,6 +419,29 @@ static func _matches(data: Dictionary, fields: Dictionary) -> bool:
 		if typeof(data.get(key)) != fields[key]:
 			return false
 	return true
+
+
+func _shift_reputation(faction: String, amount: int) -> void:
+	reputation[faction] = clampi(reputation[faction] + amount, -100, 100)
+
+
+func _update_hostility() -> void:
+	for enemy: DungeonFloor.Enemy in floor.enemies:
+		var faction: String = CONTENT.foes[ENEMY_IDS[enemy.kind]].faction
+		enemy.hostile = enemy.kind == DungeonFloor.EnemyKind.BOSS or not has_truce(faction)
+
+
+func _fulfill_sponsors(used_tonic: bool, used_skill: bool) -> void:
+	for sponsor: String in sponsor_contracts:
+		if sponsor_contracts[sponsor] != "active":
+			continue
+		var definition: Dictionary = CONTENT.sponsors[sponsor]
+		var condition_met: bool = (definition.condition == "no_tonic" and not used_tonic) or (definition.condition == "skill" and used_skill)
+		if condition_met:
+			sponsor_contracts[sponsor] = "fulfilled"
+			for item: String in definition.gift:
+				add_item(item, definition.gift[item])
+			event_occurred.emit("sponsor_fulfilled")
 
 
 func _on_show_event(event: String) -> void:

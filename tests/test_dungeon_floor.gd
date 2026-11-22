@@ -81,3 +81,16 @@ func test_diagonal_wall_corner_is_visible_but_blocks_the_floor_beyond_it() -> vo
 
 	assert_true(floor_state.visible.has(Vector2i(2, 2)), "The solid wall joint is visible.")
 	assert_false(floor_state.visible.has(Vector2i(3, 3)), "The corner still blocks sight into the next room.")
+
+
+func test_neutral_enemy_yields_the_corridor_without_initiating_battle() -> void:
+	var floor_state := DungeonFloor.new(PackedStringArray(["#######", "#Sg...#", "#######"]))
+	var sentinel: DungeonFloor.Enemy = floor_state.enemies[0]
+	sentinel.hostile = false
+	assert_true(floor_state.take_turn(Vector2i.RIGHT))
+	assert_eq(floor_state.player, Vector2i(2, 1))
+	assert_eq(sentinel.cell, Vector2i(1, 1))
+	assert_true(floor_state.take_turn(Vector2i.RIGHT))
+	assert_true(floor_state.take_turn())
+	assert_eq(sentinel.cell, Vector2i(2, 1))
+	assert_null(floor_state.encounter)

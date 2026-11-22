@@ -84,6 +84,7 @@ Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dunge
 
 ## Factions
 
+- On Floor 1, the Ashfang Brood and Barrow Watch are rivals. Hunting Ashfang beasts improves Watch standing, and the Watch envoy accepts bandages. Sentinels yield the way and patrol peacefully once a truce is earned. Sir Aldren guards the stairs independently of the truce.
 - Each floor hosts two to four factions (monster tribes, contestant groups, show staff) with a relation matrix toward each other and the party.
 - Reputation changes through kills, quests, gifts, and betrayals. It controls hostility, shop access, recruits, and some quest lines.
 - Factions act on the map: they hold territory, patrol, and fight rivals, so the floor changes while the player explores.

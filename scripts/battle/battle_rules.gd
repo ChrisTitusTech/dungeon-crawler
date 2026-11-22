@@ -69,6 +69,7 @@ const POTION_HEAL := 9
 var party: Array[Fighter]
 var enemy: Fighter
 var potions: int
+var used_skill: bool = false
 var outcome: Outcome = Outcome.IN_PROGRESS
 var messages: PackedStringArray = []
 
@@ -128,6 +129,7 @@ func use_command(command: Command) -> bool:
 			if not actor.skill_ready:
 				return false
 			actor.skill_ready = false
+			used_skill = true
 			_hit(actor, enemy, actor.skill.bonus, actor.skill.wound)
 		Command.DEFEND:
 			actor.guarding = true
@@ -151,13 +153,19 @@ func use_command(command: Command) -> bool:
 func take_enemy_turn() -> void:
 	if current_fighter() != enemy:
 		return
+	var target: Fighter = enemy_target()
+	if target != null:
+		_enemy_actions += 1
+		var wound: String = enemy.wound if _enemy_actions % 2 == 0 else ""
+		_hit(enemy, target, 0, wound)
+		_finish_action()
+
+
+func enemy_target() -> Fighter:
 	for member: Fighter in party:
 		if member.hp > 0:
-			_enemy_actions += 1
-			var wound: String = enemy.wound if _enemy_actions % 2 == 0 else ""
-			_hit(enemy, member, 0, wound)
-			_finish_action()
-			return
+			return member
+	return null
 
 
 func _hit(attacker: Fighter, target: Fighter, bonus: int = 0, wound: String = "") -> void:

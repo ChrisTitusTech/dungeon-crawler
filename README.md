@@ -6,7 +6,7 @@ You are a contestant in a lethal, televised 18-floor dungeon run by a snarky Sys
 
 ## Status
 
-**Milestones 0 through 2 are complete.** Start beside the safe-room door, recruit Sable, and defeat Sir Aldren, the Hollow Castellan, before Floor 1 collapses. Milestone 3 expands the campaign systems and builds toward the three-floor demo. [Roadmap](docs/roadmap.md)
+**Milestones 0 through 2 are complete.** Start beside the safe-room door, recruit Sable, and defeat Sir Aldren, the Hollow Castellan, before Floor 1 collapses. Milestone 3 is in progress with Floor 1 faction reputation, crafting, and sponsor contracts. [Roadmap](docs/roadmap.md)
 
 ## Documentation
 
@@ -25,6 +25,8 @@ Choose one of three save slots. New runs generate a 118×84 dungeon with varied 
 
 Entering the safe room saves a checkpoint. Use the chest to save again or open reward boxes. Use the interior door to return to the dungeon tile you left. The collapse clock advances with movement and waiting on the dungeon floor. A wipe or collapse returns the party to its last safe-room checkpoint.
 
+At the workbench, turn pelts, iron scrap, and bitterroot into supplies or a Tempered Longsword. Hunting Ashfang beasts or offering bandages to the Watch envoy can earn a truce with Barrow Sentinels. Wins earn viewers, and victories that use a skill or end with an ally at low HP draw more. Visit the sponsor board to see offers and their battle conditions.
+
 Party HP, injuries, and equipment carry between fights. The pack lets you use tonics, treat wounds, and equip loot. Spend earned stat points from the Party menu. Each fighter gets one use of their skill per battle. After defeating Sir Aldren, use the stairs to clear the floor.
 
 | Action | Keyboard | Gamepad | Mouse |
@@ -39,6 +41,10 @@ Party HP, injuries, and equipment carry between fights. The pack lets you use to
 | Pause | P | Start / Menu | |
 
 Movement follows the diagonal tile edges of the isometric view.
+
+The game opens in a 1280×720 window. The 640×360 game canvas scales in whole steps to preserve sharp pixel art.
+
+Tap or hold a direction to move. The save-slot and pause menus offer separate music and effects volume controls.
 
 Fleeing leaves the enemy on the map and gives the party one turn to move away. To revisit the original hand-built prototype, run `godot --path . -- --prototype`.
 

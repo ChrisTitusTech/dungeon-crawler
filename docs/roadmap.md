@@ -16,7 +16,7 @@ One hand-built isometric dungeon with turn-stepped movement, field of view, a mi
 A rendered playthrough used the safe-room doors, beds, dining table, and chest, then defeated the Floor 1 boss and reopened the cleared save. All 19 tests passed, and Windows and Linux release exports succeeded. The 30 to 60 minute target remains a benchmark for balance playtests.
 
 ## Milestone 3: Systems and demo (floors 1 to 3)
-**Next.** Factions and reputation, crafting, viewers and sponsors, race and class selection, pets, full gamepad support, production art and audio pass, settings and accessibility options. Ends in a public demo and Steam page.
+**In progress.** Floor 1 has the first faction and reputation pass, a refuge workbench, viewer counts, and two sponsor contracts. The first art and audio pass adds animated sprites, combat effects, scene fades, original music and sound effects, and audio volume settings. Race and class selection, pets, full gamepad support, art and audio for the remaining floors, broader settings and accessibility options, Floors 2 and 3, and the public demo remain open.
 
 ## Milestone 4: Early Access (floors 1 to 6)
 **Planned.** Two full tiers of content, balance pass, save migration, tutorialisation, Steam integration (achievements, cloud saves), Steam Deck check, and launch.
@@ -48,9 +48,9 @@ Work items in order through the demo.
 15. [x] `collapse-timer` tracks turns outside camp and reloads the checkpoint after collapse.
 16. [x] `show-layer` connects run events to achievements, loot boxes, and written announcer lines.
 17. [x] `vertical-slice` delivers a playable Floor 1 with a verified boss clear and completed save reload.
-18. [ ] `factions` for faction behaviour and reputation.
-19. [ ] `crafting` for recipes and stations.
-20. [ ] `viewers-sponsors` for viewer count and sponsors.
+18. [ ] `factions` has rival reputation, a Watch envoy, a truce, and neutral patrols. Territory, faction skirmishes, and faction quests remain open.
+19. [x] `crafting` adds the refuge workbench with three recipes that use materials from enemies and supply caches.
+20. [x] `viewers-sponsors` adds a visible audience count and two sponsor contracts with one-time gifts.
 21. [ ] `race-class` for race and class selection and pets.
 22. [ ] `demo-release` for Floors 2 and 3, the art and audio pass, the demo, and the Steam page.
 

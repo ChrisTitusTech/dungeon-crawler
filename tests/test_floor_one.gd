@@ -246,6 +246,132 @@ func test_exit_requires_a_boss_victory_and_the_stairs() -> void:
 	assert_true(run.achievements.has("Still Standing"))
 
 
+func test_truce_changes_enemy_behaviour_and_survives_a_checkpoint() -> void:
+	var run := CampaignRun.new(83)
+	var rat: DungeonFloor.Enemy
+	var sentinel: DungeonFloor.Enemy
+	var boss: DungeonFloor.Enemy
+	for enemy: DungeonFloor.Enemy in run.floor.enemies:
+		match enemy.kind:
+			DungeonFloor.EnemyKind.RAT: rat = enemy
+			DungeonFloor.EnemyKind.GUARD: sentinel = enemy
+			DungeonFloor.EnemyKind.BOSS: boss = enemy
+	assert_not_null(sentinel)
+	if sentinel == null:
+		return
+	assert_true(sentinel.hostile)
+	assert_false(run.offer_faction_gift("watch"), "The envoy is in the safe room.")
+	run.settle_battle(rat, BattleRules.Outcome.WON, run.count("tonic"))
+	assert_eq(run.reputation["watch"], -14)
+	assert_eq(run.reputation["ashfang"], -73)
+	assert_eq(run.count("ashfang_pelt"), 1)
+	assert_true(run.enter_refuge())
+	assert_true(run.offer_faction_gift("watch"))
+	assert_eq(run.count("bandage"), 0)
+	assert_false(sentinel.hostile)
+	assert_true(boss.hostile)
+	assert_false(run.offer_faction_gift("watch"))
+
+	var restored: CampaignRun = CampaignRun.restore(run.snapshot())
+	assert_not_null(restored)
+	if restored != null:
+		assert_eq(restored.reputation, run.reputation)
+		assert_false(restored.floor.enemy_at(sentinel.cell).hostile)
+
+
+func test_recipes_consume_materials_and_produce_usable_equipment() -> void:
+	var run := CampaignRun.new(83)
+	run.add_item("iron_blade")
+	run.add_item("iron_scrap")
+	assert_false(run.can_craft("temper_blade"))
+	assert_true(run.enter_refuge())
+	assert_false(run.craft("temper_blade"))
+	assert_eq(run.count("iron_blade"), 1, "An incomplete recipe spends nothing.")
+	run.add_item("iron_scrap")
+	assert_true(run.craft("temper_blade"))
+	assert_eq(run.count("iron_scrap"), 0)
+	assert_eq(run.count("iron_blade"), 0)
+	assert_true(run.equip(run.party[0], "tempered_blade"))
+	assert_eq(run.party[0].attack_power(), 12)
+
+
+func test_refuge_workbench_and_envoy_can_be_used_from_the_map() -> void:
+	var game: DungeonGame = GAME.instantiate() as DungeonGame
+	game.save_directory = _directory
+	add_child_autofree(game)
+	game._new_slot(1)
+	game._interact()
+	game._run.add_item("ashfang_pelt", 2)
+	_walk_straight(game, Vector2i(4, 6))
+	game._interact()
+	var heading: Label = game._menu.get_node("%Heading")
+	var choices: VBoxContainer = game._menu.get_node("%Choices")
+	assert_eq(heading.text, "Workbench")
+	var craft_button: Button = choices.get_child(0)
+	assert_false(craft_button.disabled)
+	craft_button.pressed.emit()
+	assert_eq(game._run.count("bandage"), 4)
+	game._hide_menu()
+
+	_walk_straight(game, Vector2i(4, 5))
+	_walk_straight(game, Vector2i(13, 5))
+	_walk_straight(game, Vector2i(13, 4))
+	game._interact()
+	assert_eq(heading.text, "Watch envoy")
+	var offer: Button = choices.get_child(0)
+	offer.pressed.emit()
+	assert_true(game._run.has_truce("watch"))
+	assert_eq(CampaignSave.read(_directory, 1).reputation["watch"], 0)
+	game._hide_menu()
+
+	_walk_straight(game, Vector2i(9, 4))
+	_walk_straight(game, Vector2i(9, 2))
+	game._run.viewers = 35
+	game._interact()
+	assert_eq(heading.text, "Sponsor board")
+	var contract: Button = choices.get_child(0)
+	assert_false(contract.disabled)
+	contract.pressed.emit()
+	assert_eq(CampaignSave.read(_directory, 1).sponsor_contracts["lanternwrights"], "active")
+	await wait_process_frames(1)
+
+
+func test_sponsor_gifts_require_their_contract_conditions() -> void:
+	var run := CampaignRun.new(83)
+	var rat: DungeonFloor.Enemy = run.floor.enemy_at(_find(run.floor, "r"))
+	assert_eq(rat.kind, DungeonFloor.EnemyKind.RAT)
+	assert_false(run.can_accept_sponsor("lanternwrights"))
+	run.viewers = 75
+	assert_false(run.accept_sponsor("lanternwrights"))
+	assert_true(run.enter_refuge())
+	assert_true(run.accept_sponsor("lanternwrights"))
+	assert_true(run.accept_sponsor("hammer_crown"))
+	run.leave_refuge()
+
+	run.settle_battle(rat, BattleRules.Outcome.FLED, 4, true)
+	assert_eq(run.viewers, 75)
+	assert_eq(run.sponsor_contracts["hammer_crown"], "active")
+	run.settle_battle(rat, BattleRules.Outcome.WON, 3, false)
+	assert_eq(run.viewers, 89)
+	assert_eq(run.sponsor_contracts["lanternwrights"], "active")
+	assert_eq(run.sponsor_contracts["hammer_crown"], "active")
+	var tonics: int = run.count("tonic")
+	run.settle_battle(rat, BattleRules.Outcome.WON, tonics, true)
+	assert_eq(run.viewers, 108)
+	assert_eq(run.sponsor_contracts["lanternwrights"], "fulfilled")
+	assert_eq(run.sponsor_contracts["hammer_crown"], "fulfilled")
+	assert_eq(run.count("tonic"), tonics + 4)
+	assert_eq(run.count("hide_coat"), 1)
+	run.settle_battle(rat, BattleRules.Outcome.WON, run.count("tonic"), true)
+	assert_eq(run.count("hide_coat"), 1, "A fulfilled contract pays once.")
+	assert_true(run.enter_refuge())
+	var restored: CampaignRun = CampaignRun.restore(run.snapshot())
+	assert_not_null(restored)
+	if restored != null:
+		assert_eq(restored.viewers, run.viewers)
+		assert_eq(restored.sponsor_contracts, run.sponsor_contracts)
+
+
 func _find(floor_state: DungeonFloor, marker: String) -> Vector2i:
 	for y: int in floor_state.size.y:
 		for x: int in floor_state.size.x:

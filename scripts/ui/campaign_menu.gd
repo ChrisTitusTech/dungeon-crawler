@@ -1,6 +1,8 @@
 class_name CampaignMenu
 extends Control
 
+signal option_chosen
+
 @onready var _heading: Label = %Heading
 @onready var _detail: Label = %Detail
 @onready var _scroll: ScrollContainer = %Scroll
@@ -12,6 +14,10 @@ static func choice(label: String, run: Callable, disabled: bool = false) -> Dict
 
 
 func present(heading: String, detail: String, choices: Array[Dictionary]) -> void:
+	var focus_index: int = -1
+	var focused: Control = get_viewport().gui_get_focus_owner()
+	if visible and _heading.text == heading and focused != null and focused.get_parent() == _choices:
+		focus_index = focused.get_index()
 	_heading.text = heading
 	_detail.text = detail
 	for child: Node in _choices.get_children():
@@ -19,16 +25,26 @@ func present(heading: String, detail: String, choices: Array[Dictionary]) -> voi
 		child.queue_free()
 
 	var first: Button
+	var preferred: Button
 	for entry: Dictionary in choices:
 		var button := Button.new()
 		button.text = entry.label
 		button.disabled = entry.disabled
 		button.custom_minimum_size.y = 25
-		button.pressed.connect(entry.run)
+		button.pressed.connect(_choose.bind(entry.run))
 		_choices.add_child(button)
 		if first == null and not button.disabled:
 			first = button
+		if button.get_index() == focus_index and not button.disabled:
+			preferred = button
 	_scroll.scroll_vertical = 0
 	show()
-	if first != null:
+	if preferred != null:
+		preferred.grab_focus()
+	elif first != null:
 		first.grab_focus()
+
+
+func _choose(action: Callable) -> void:
+	option_chosen.emit()
+	action.call()

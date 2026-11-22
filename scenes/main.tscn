@@ -1,10 +1,12 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/dungeon_game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/world/dungeon_view.gd" id="2_dungeon"]
 [ext_resource type="TileSet" path="res://data/prototype_tileset.tres" id="3_tiles"]
 [ext_resource type="Theme" path="res://data/prototype_theme.tres" id="4_theme"]
 [ext_resource type="Script" path="res://scripts/ui/dungeon_minimap.gd" id="5_minimap"]
+[ext_resource type="Script" path="res://scripts/ui/scene_fade.gd" id="6_fade"]
+[ext_resource type="Script" path="res://scripts/core/dungeon_audio.gd" id="7_audio"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -15,6 +17,9 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_game")
+
+[node name="Audio" type="Node" parent="."]
+script = ExtResource("7_audio")
 
 [node name="Dungeon" type="Node2D" parent="."]
 script = ExtResource("2_dungeon")
@@ -171,3 +176,14 @@ unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 text = "Map [M]"
+
+[node name="Transition" type="CanvasLayer" parent="."]
+layer = 20
+
+[node name="Fade" type="ColorRect" parent="Transition"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("6_fade")

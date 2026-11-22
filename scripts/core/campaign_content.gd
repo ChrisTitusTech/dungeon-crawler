@@ -6,6 +6,9 @@ extends Resource
 @export var items: Dictionary
 @export var skills: Dictionary
 @export var show: Dictionary
+@export var factions: Dictionary
+@export var recipes: Dictionary
+@export var sponsors: Dictionary
 
 
 func make_fighter(id: String) -> BattleRules.Fighter:
