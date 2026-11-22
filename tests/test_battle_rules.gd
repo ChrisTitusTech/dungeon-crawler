@@ -57,3 +57,33 @@ func test_fallen_fighters_are_skipped_until_the_enemy_wins() -> void:
 	assert_eq(mira.hp, 0)
 	assert_eq(battle.outcome, BattleRules.Outcome.LOST)
 	assert_null(battle.current_fighter())
+
+
+func test_cleric_heals_the_most_injured_standing_ally() -> void:
+	var cleric := BattleRules.Fighter.new("Cleric", 24, 5, 14)
+	cleric.skill = CampaignRun.CONTENT.skills["sanctuary_light"]
+	var ally := BattleRules.Fighter.new("Ally", 28, 6, 10)
+	var fallen := BattleRules.Fighter.new("Fallen", 30, 9, 12)
+	fallen.hp = 0
+	var foe := BattleRules.Fighter.new("Rat", 24, 5, 4)
+	var battle := BattleRules.new([cleric, ally, fallen], foe, 0)
+	assert_false(battle.use_command(BattleRules.Command.SKILL), "A heal needs a living, injured target.")
+	ally.hp = 4
+	assert_true(battle.use_command(BattleRules.Command.SKILL))
+	assert_eq(ally.hp, 24)
+	assert_eq(foe.hp, foe.max_hp)
+	assert_eq(fallen.hp, 0)
+	assert_eq(battle.potions, 0)
+	assert_false(cleric.skill_ready)
+
+
+func test_fighter_skill_stops_at_the_killing_blow() -> void:
+	var fighter := BattleRules.Fighter.new("Fighter", 26, 5, 12)
+	fighter.skill = CampaignRun.CONTENT.skills["twin_cut"]
+	var foe := BattleRules.Fighter.new("Sentinel", 9, 4, 8)
+	var battle := BattleRules.new([fighter], foe, 0)
+	assert_true(battle.use_command(BattleRules.Command.SKILL))
+	assert_eq(battle.outcome, BattleRules.Outcome.WON)
+	assert_eq(battle.messages.size(), 2)
+	assert_string_contains(battle.messages[0], "4")
+	assert_string_contains(battle.messages[1], "goes down")

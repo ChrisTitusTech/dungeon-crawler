@@ -52,7 +52,7 @@ Work items in order through the demo.
 19. [x] `crafting` adds the refuge workbench with three recipes that use materials from enemies and supply caches.
 20. [x] `guild-contracts` adds two refuge board contracts that unlock at two and five victories and pay one-time rewards.
 21. [x] `floor-one-polish` smooths held movement and adds a dungeon backdrop and opposing battle formations.
-22. [x] `race-class` adds race and class choices with unlocks tied to play, plus a recruitable pet.
+22. [x] `race-class` adds a race choice with a truce unlock, twelve base classes with individual skills, and a recruitable pet.
 23. [ ] `demo-release` for Floors 2 and 3, their art and audio, the demo, and the Steam page.
 
 ## Risks and open questions

@@ -331,9 +331,11 @@ func test_stairs_save_the_next_floor_and_the_final_clear() -> void:
 		elif number == 3:
 			assert_eq(heading.text, "Choose Rook's class")
 			assert_false(run.completed)
-			var guildblade: Button = choices.get_child(2)
-			assert_false(guildblade.disabled)
-			guildblade.pressed.emit()
+			assert_eq(choices.get_child_count(), 13, "Twelve classes and a return button.")
+			var fighter: Button = choices.get_child(4)
+			assert_string_contains(fighter.text, "Fighter")
+			assert_false(fighter.disabled)
+			fighter.pressed.emit()
 		var saved: Dictionary = CampaignSave.read(_directory, 1)
 		if number < CampaignRun.LAST_FLOOR:
 			assert_eq(saved.floor_number, number + 1)
@@ -371,9 +373,9 @@ func test_stairs_save_the_next_floor_and_the_final_clear() -> void:
 			assert_eq(heading.text, "Floor 3 cleared")
 			assert_eq(game._run.seconds_left, 23.5)
 			assert_has(game._run.achievements, "Past the Regent")
-			assert_eq(game._run.class_id, "guildblade")
-			assert_eq(game._party[0].skill.name, "Seal Cutter")
-			assert_eq(game._party[0].max_hp, party[0].max_hp + 4)
+			assert_eq(game._run.class_id, "fighter")
+			assert_eq(game._party[0].skill.name, "Twin Cut")
+			assert_eq(game._party[0].max_hp, party[0].max_hp + 5)
 	await wait_process_frames(1)
 
 
@@ -392,9 +394,11 @@ func test_locked_advancement_and_fallen_rook() -> void:
 	stairs = _find(run.floor, ">")
 	run.floor.player = stairs
 	run.boss_defeated = true
-	assert_false(run.escape(stairs, "guildblade"), "Guildblade requires a fulfilled contract.")
-	assert_true(run.escape(stairs, "vanguard"))
-	assert_false(run.escape(stairs, "vanguard"), "Class bonuses apply only once.")
+	assert_false(run.escape(stairs, "unknown"), "A valid class is required.")
+	for choice: Dictionary in run.advancement_choices().values():
+		assert_true(run.advancement_unlocked(choice), "Every base class is open without a contract.")
+	assert_true(run.escape(stairs, "paladin"))
+	assert_false(run.escape(stairs, "paladin"), "Class bonuses apply only once.")
 
 
 func test_pet_rescue_needs_a_bandage_and_pet_can_use_its_skill() -> void:

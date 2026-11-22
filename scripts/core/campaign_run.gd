@@ -331,7 +331,6 @@ func advancement_choices() -> Dictionary:
 func advancement_unlocked(choice: Dictionary) -> bool:
 	match choice.get("requires", ""):
 		"truce": return has_truce("watch")
-		"contract": return sponsor_contracts.values().has("fulfilled")
 		"": return true
 	return false
 

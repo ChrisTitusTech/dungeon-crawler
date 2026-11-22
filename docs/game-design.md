@@ -63,7 +63,8 @@ Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dunge
 ## Party and progression
 
 - The main character starts as an unclassed human with basic stats.
-- Race is chosen at the end of floor 2 and class at the end of floor 3 (tunable), from options shaped by how the player has played so far.
+- Rook chooses a race at the end of Floor 2. A Barrow Watch truce unlocks Gloamkin.
+- Rook chooses a class at the end of Floor 3. The class roster follows the twelve base classes in the 2024 D&D rules. Every race can choose any class. Each class has a signature skill adapted to this game's turn order, health, and injury rules. The choice is saved with the completed demo. [D&D Free Rules: Character Classes](https://www.dndbeyond.com/sources/dnd/br-2024/character-classes)
 - Recruits and pets join through story beats, faction reputation, or rescue. The roster can exceed 4, with extras waiting in safe rooms.
 - Levels grant stat points; skills level through use.
 - Dead members are gone for good, with their gear dropped where they fell.

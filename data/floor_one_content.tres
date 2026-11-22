@@ -36,9 +36,18 @@ skills = {
 "trip": {"name": "Hamstring", "bonus": 3, "wound": "legs"},
 "brace": {"name": "Breaking strike", "bonus": 4, "wound": "head"},
 "ankle_bite": {"name": "Ankle Bite", "bonus": 2, "wound": "legs"},
-"shield_break": {"name": "Shield Break", "bonus": 7, "wound": "arms"},
-"low_feint": {"name": "Low Feint", "bonus": 6, "wound": "legs"},
-"seal_cutter": {"name": "Seal Cutter", "bonus": 5, "wound": "torso"}
+"fury_break": {"name": "Fury Break", "bonus": 6, "guard": true},
+"steady_chorus": {"name": "Steady Chorus", "heal": 10, "wound": "head"},
+"sanctuary_light": {"name": "Sanctuary Light", "heal": 20, "hits": 0},
+"briar_snare": {"name": "Briar Snare", "bonus": 7, "wound": "legs"},
+"twin_cut": {"name": "Twin Cut", "hits": 2},
+"still_palm": {"name": "Still Palm", "bonus": 5, "wound": "head"},
+"dawnbrand": {"name": "Dawnbrand", "bonus": 5, "heal": 8},
+"trailmark_shot": {"name": "Trailmark Shot", "bonus": 4, "wound": "legs"},
+"blindside": {"name": "Blindside", "bonus": 5, "wound": "torso"},
+"wild_flare": {"name": "Wild Flare", "bonus": 12},
+"pact_lash": {"name": "Pact Lash", "bonus": 7, "heal": 6, "heal_self": true},
+"binding_sigil": {"name": "Binding Sigil", "bonus": 6, "wound": "arms"}
 }
 races = {
 "human": {"name": "Human", "summary": "+2 base attack", "power": 2},
@@ -46,9 +55,18 @@ races = {
 "gloamkin": {"name": "Gloamkin", "summary": "+3 base speed", "speed": 3, "requires": "truce", "unlock": "Hold a Barrow Watch truce"}
 }
 classes = {
-"vanguard": {"name": "Vanguard", "summary": "+2 base attack, Shield Break wounds arms", "power": 2, "skill": "shield_break"},
-"skirmisher": {"name": "Skirmisher", "summary": "+2 base speed, Low Feint wounds legs", "speed": 2, "skill": "low_feint"},
-"guildblade": {"name": "Guildblade", "summary": "+4 max HP, Seal Cutter wounds the torso", "hp": 4, "skill": "seal_cutter", "requires": "contract", "unlock": "Fulfill a guild contract"}
+"barbarian": {"name": "Barbarian", "summary": "+8 HP · Strike and guard", "hp": 8, "skill": "fury_break"},
+"bard": {"name": "Bard", "summary": "+3 HP · Disorient and heal", "hp": 3, "skill": "steady_chorus"},
+"cleric": {"name": "Cleric", "summary": "+3 HP · Heal an ally for 20", "hp": 3, "skill": "sanctuary_light"},
+"druid": {"name": "Druid", "summary": "+3 HP · Slow with thorns", "hp": 3, "skill": "briar_snare"},
+"fighter": {"name": "Fighter", "summary": "+5 HP, +2 attack · Strike twice", "hp": 5, "power": 2, "skill": "twin_cut"},
+"monk": {"name": "Monk", "summary": "+3 HP, +2 speed · Disorient", "hp": 3, "speed": 2, "skill": "still_palm"},
+"paladin": {"name": "Paladin", "summary": "+5 HP · Smite and heal", "hp": 5, "skill": "dawnbrand"},
+"ranger": {"name": "Ranger", "summary": "+5 HP, +1 speed · Hamper movement", "hp": 5, "speed": 1, "skill": "trailmark_shot"},
+"rogue": {"name": "Rogue", "summary": "+3 HP, +3 speed · Expose the torso", "hp": 3, "speed": 3, "skill": "blindside"},
+"sorcerer": {"name": "Sorcerer", "summary": "Burst damage", "skill": "wild_flare"},
+"warlock": {"name": "Warlock", "summary": "+3 HP · Strike and regain HP", "hp": 3, "skill": "pact_lash"},
+"wizard": {"name": "Wizard", "summary": "Cripple enemy attacks", "skill": "binding_sigil"}
 }
 show = {
 "intro": {"line": "Sir Aldren, the Hollow Castellan, guards the stairs. Challenge him before the vault collapses."},

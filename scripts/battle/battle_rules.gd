@@ -118,6 +118,16 @@ func potion_target() -> Fighter:
 	return target
 
 
+func can_use_skill(actor: Fighter) -> bool:
+	return actor != null and actor.skill_ready and skill_target(actor) != null
+
+
+func skill_target(actor: Fighter) -> Fighter:
+	if actor.skill.get("hits", 1) > 0:
+		return enemy
+	return potion_target()
+
+
 func use_command(command: Command) -> bool:
 	var actor: Fighter = current_fighter()
 	if actor == null or actor == enemy:
@@ -127,11 +137,9 @@ func use_command(command: Command) -> bool:
 		Command.ATTACK:
 			_hit(actor, enemy)
 		Command.SKILL:
-			if not actor.skill_ready:
+			if not can_use_skill(actor):
 				return false
-			actor.skill_ready = false
-			used_skill = true
-			_hit(actor, enemy, actor.skill.bonus, actor.skill.wound)
+			_use_skill(actor)
 		Command.DEFEND:
 			actor.guarding = true
 			_log("%s braces for the next hit." % actor.name)
@@ -149,6 +157,26 @@ func use_command(command: Command) -> bool:
 			return true
 	_finish_action()
 	return true
+
+
+func _use_skill(actor: Fighter) -> void:
+	actor.skill_ready = false
+	used_skill = true
+	var skill: Dictionary = actor.skill
+	for hit: int in int(skill.get("hits", 1)):
+		if enemy.hp == 0:
+			break
+		_hit(actor, enemy, skill.get("bonus", 0), skill.get("wound", ""))
+	if skill.get("guard", false):
+		actor.guarding = true
+		_log("%s braces for the next hit." % actor.name)
+	var healing: int = skill.get("heal", 0)
+	if healing > 0:
+		var ally: Fighter = actor if skill.get("heal_self", false) else potion_target()
+		if ally != null and ally.hp < ally.max_hp:
+			var restored: int = mini(healing, ally.max_hp - ally.hp)
+			ally.hp += restored
+			_log("%s restores %d HP to %s." % [actor.name, restored, ally.name])
 
 
 func take_enemy_turn() -> void:

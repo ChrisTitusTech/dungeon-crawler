@@ -96,8 +96,11 @@ func _choose(command: BattleRules.Command) -> void:
 	if _controls_held or _animating:
 		return
 	var actor: BattleRules.Fighter = rules.current_fighter()
+	if actor == null or actor == rules.enemy:
+		return
 	var target: BattleRules.Fighter = rules.enemy
 	match command:
+		BattleRules.Command.SKILL: target = rules.skill_target(actor)
 		BattleRules.Command.ITEM: target = rules.potion_target()
 		BattleRules.Command.DEFEND: target = actor
 		BattleRules.Command.FLEE: target = null
@@ -138,7 +141,8 @@ func _present_action(command: BattleRules.Command, actor: BattleRules.Fighter,
 		var amount: int = target.hp - previous_hp
 		var label: String = "%+d" % amount
 		match command:
-			BattleRules.Command.SKILL: kind = BattleEffect.Kind.SKILL
+			BattleRules.Command.SKILL:
+				kind = BattleEffect.Kind.SKILL if target == rules.enemy else BattleEffect.Kind.HEAL
 			BattleRules.Command.ITEM: kind = BattleEffect.Kind.HEAL
 			BattleRules.Command.DEFEND:
 				kind = BattleEffect.Kind.GUARD
@@ -185,7 +189,7 @@ func _render() -> void:
 	var can_act: bool = not _controls_held and not resolved and actor != rules.enemy
 	_attack.disabled = not can_act
 	_skill.visible = rules.party.any(func(member: BattleRules.Fighter) -> bool: return not member.skill.is_empty())
-	_skill.disabled = not can_act or not actor.skill_ready
+	_skill.disabled = not can_act or not rules.can_use_skill(actor)
 	_skill.text = actor.skill.get("name", "Skill") if can_act else "Skill"
 	_skill.tooltip_text = actor.skill.get("name", "") + " · Once per fight" if can_act else ""
 	_defend.disabled = not can_act

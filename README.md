@@ -30,9 +30,9 @@ At the workbench, turn pelts, iron scrap, and bitterroot into supplies or a Temp
 
 Party HP, injuries, and equipment carry between fights. The pack lets you use tonics, treat wounds, and equip loot. Spend earned stat points from the Party menu. Each fighter gets one use of their skill per battle. Recruit Sable before leaving Floor 1. Look for Cinder, a wounded Ashfang rat, in the upper gallery on Floor 2. Rescue Cinder with a bandage and an open party slot.
 
-After defeating each boss, use the stairs. Floors 2 and 3 start at a safe-room checkpoint with a fresh 30-minute countdown. Choose Rook's race at the Floor 2 stairs and class at the Floor 3 stairs. A Watch truce unlocks an extra race, and a fulfilled guild contract unlocks an extra class. Choosing the class finishes the run.
+After defeating each boss, use the stairs. Floors 2 and 3 start at a safe-room checkpoint with a fresh 30-minute countdown. Choose Rook's race at the Floor 2 stairs. A Watch truce unlocks an extra race. At the Floor 3 stairs, choose any of the twelve base classes. Each has its own combat skill. Choosing the class finishes the run.
 
-The race and class update uses a new checkpoint format. Choose **Replace slot** to start a new run in a slot occupied by an older save.
+The updated class roster uses a new checkpoint format. Choose **Replace slot** to start a new run in a slot occupied by an older save.
 
 | Action | Keyboard | Gamepad | Mouse |
 | --- | --- | --- | --- |
