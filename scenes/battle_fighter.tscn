@@ -20,12 +20,6 @@ corner_radius_bottom_right = 3
 mouse_filter = 2
 script = ExtResource("1_fighter")
 
-[node name="Portrait" type="TextureRect" parent="."]
-unique_name_in_owner = true
-texture_filter = 1
-mouse_filter = 2
-expand_mode = 1
-
 [node name="Effects" type="Control" parent="."]
 unique_name_in_owner = true
 mouse_filter = 2

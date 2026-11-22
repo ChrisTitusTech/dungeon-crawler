@@ -16,7 +16,7 @@ func burst(kind: Kind, label: String) -> void:
 	_label = label
 	_animate(0.0)
 	_effect = create_tween()
-	_effect.tween_method(_animate, 0.0, 1.0, 0.37)
+	_effect.tween_method(_animate, 0.0, 1.0, 0.48).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 func _animate(progress: float) -> void:
@@ -29,25 +29,34 @@ func _draw() -> void:
 		return
 	var center := Vector2(size.x * 0.5, size.y * 0.59)
 	var tint: Color = [Color("#ffe1af"), Color("#b9adff"), Color("#94d9f4"), Color("#91f0ac")][_kind]
-	tint.a = 1.0 - _progress
+	tint.a = pow(1.0 - _progress, 1.45)
+	var wake: Color = Color(tint, tint.a * 0.30)
 	match _kind:
 		Kind.HIT, Kind.SKILL:
-			var offset: float = _progress * 6.0
-			draw_polyline(PackedVector2Array([center + Vector2(-15 + offset, 10), center + Vector2(1 + offset, 0),
-				center + Vector2(17 + offset, -13)]), tint, 2.0)
+			var sweep: float = lerpf(-2.42, -0.66, _progress)
+			var origin: Vector2 = center + Vector2(0, 11)
+			var radius: float = 18.0 + _progress * 6.0
+			draw_arc(origin, radius, sweep - 1.2, sweep, 20, wake, 6.0, true)
+			draw_arc(origin, radius, sweep - 1.08, sweep, 20, tint, 2.3, true)
+			if _kind == Kind.SKILL:
+				draw_arc(origin, radius + 5.0, sweep - 0.85, sweep + 0.2, 16, wake, 2.3, true)
 		Kind.GUARD:
-			draw_arc(center, 11 + _progress * 4.0, 0.0, TAU, 12, tint, 2.0)
+			for ring: int in range(2):
+				var radius: float = 11.0 + _progress * 9.0 + ring * 4.0
+				draw_arc(center, radius, 0.0, TAU, 32, tint if ring == 0 else wake, 1.8, true)
 		Kind.HEAL:
-			for x: float in [-11.0, 13.0]:
-				var rise: Vector2 = center + Vector2(x, -_progress * 16.0)
-				draw_line(rise - Vector2(0, 3), rise + Vector2(0, 3), tint)
-				draw_line(rise - Vector2(3, 0), rise + Vector2(3, 0), tint)
-	for spark: int in 6:
-		var angle: float = float(spark) * TAU / 6.0 + 0.2
-		var point: Vector2 = (center + Vector2.from_angle(angle) * (8.0 + _progress * 15.0)).round()
-		draw_rect(Rect2(point, Vector2(2, 2)), tint)
+			for mote: int in range(7):
+				var orbit: float = mote * TAU / 7.0 + _progress * 2.3
+				var rise: Vector2 = center + Vector2(cos(orbit) * 14.0, sin(orbit) * 5.0 - _progress * (12.0 + mote))
+				draw_circle(rise, 1.5 + 0.55 * (mote % 2), tint, true, -1.0, true)
+	if _kind != Kind.HEAL:
+		for spark: int in range(9):
+			var angle: float = spark * TAU / 9.0 + 0.2
+			var direction: Vector2 = Vector2.from_angle(angle)
+			var point: Vector2 = center + direction * (6.0 + _progress * (14.0 + (spark % 3) * 5.0))
+			draw_line(point - direction * (4.0 - 2.0 * _progress), point, tint, 1.3, true)
 	if not _label.is_empty():
-		var text_position := Vector2(0, maxi(11, roundi(center.y - 9.0 - _progress * 18.0)))
+		var text_position := Vector2(0, maxi(12, roundi(center.y - 10.0 - _progress * 22.0)))
 		var shadow := Color(0.04, 0.05, 0.09, tint.a)
 		draw_string(ThemeDB.fallback_font, text_position + Vector2(1, 1), _label,
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, 13, shadow)

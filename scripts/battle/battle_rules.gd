@@ -13,7 +13,6 @@ class Fighter:
 	var guarding: bool = false
 	var id: String
 	var is_pet: bool
-	var portrait: int = -1
 	var level: int = 1
 	var xp: int = 0
 	var stat_points: int = 0

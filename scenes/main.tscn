@@ -24,8 +24,10 @@ script = ExtResource("7_audio")
 [node name="Dungeon" type="Node2D" parent="."]
 script = ExtResource("2_dungeon")
 
-[node name="Tiles" type="TileMapLayer" parent="Dungeon"]
+[node name="Ground" type="Node2D" parent="Dungeon"]
 z_index = -1
+
+[node name="Tiles" type="TileMapLayer" parent="Dungeon"]
 tile_set = ExtResource("3_tiles")
 
 [node name="Camera" type="Camera2D" parent="Dungeon"]

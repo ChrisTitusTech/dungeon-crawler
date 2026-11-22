@@ -1,8 +1,13 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/battle_view.gd" id="1_battle"]
 [ext_resource type="Theme" path="res://data/prototype_theme.tres" id="2_theme"]
-[ext_resource type="Texture2D" path="res://assets/battle_vault.png" id="3_vault"]
+[ext_resource type="Texture2D" path="res://assets/battle_arena.webp" id="3_vault"]
+
+[ext_resource type="Shader" path="res://scripts/ui/arena_light.gdshader" id="4_light"]
+
+[sub_resource type="ShaderMaterial" id="ArenaLight"]
+shader = ExtResource("4_light")
 
 [node name="Battle" type="Control"]
 layout_mode = 3
@@ -15,7 +20,8 @@ theme = ExtResource("2_theme")
 script = ExtResource("1_battle")
 
 [node name="Backdrop" type="TextureRect" parent="."]
-texture_filter = 1
+material = SubResource("ArenaLight")
+texture_filter = 2
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

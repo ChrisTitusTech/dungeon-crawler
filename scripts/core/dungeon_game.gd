@@ -251,7 +251,8 @@ func _begin_battle(enemy_kind: DungeonFloor.EnemyKind) -> void:
 	_battle.finished.connect(_close_battle)
 	var supplies: int = _run.count("tonic") if _run != null else _tonics
 	_audio.play_track(DungeonAudio.Track.BATTLE)
-	_battle.start(BattleRules.new(_party, opponent, supplies), enemy_kind, _run != null, _audio, _fade.busy)
+	var floor_number: int = _run.floor_number if _run != null else 1
+	_battle.start(BattleRules.new(_party, opponent, supplies), enemy_kind, _run != null, _audio, _fade.busy, floor_number)
 	if _run != null:
 		_battle.show_floor_clock(_run.floor_time_text())
 

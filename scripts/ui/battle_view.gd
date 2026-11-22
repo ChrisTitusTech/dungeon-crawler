@@ -4,10 +4,10 @@ extends Control
 signal finished(outcome: BattleRules.Outcome)
 
 const FIGHTER_CARD := preload("res://scenes/battle_fighter.tscn")
-const PARTY_PORTRAITS: Array[int] = [PrototypeArt.ROOK, PrototypeArt.MIRA]
-const PARTY_SLOTS: Array[Vector2] = [Vector2(0.55, 0.78), Vector2(0.80, 0.81),
-	Vector2(0.675, 0.58), Vector2(0.925, 0.61)]
-const ENEMY_SLOT := Vector2(0.24, 0.75)
+const PARTY_SLOTS: Array[Vector2] = [Vector2(0.58, 0.79), Vector2(0.83, 0.81),
+	Vector2(0.65, 0.53), Vector2(0.89, 0.55)]
+const ENEMY_SLOT := Vector2(0.24, 0.78)
+const ARENA_TINTS := [Color("#cecbd2"), Color("#b8a5dc"), Color("#a0baca")]
 const PARTY_ACCENT := Color("#8af3cc")
 const ENEMY_ACCENT := Color("#fa987e")
 const ACTION_CUES := [DungeonAudio.Cue.HIT, DungeonAudio.Cue.GUARD, DungeonAudio.Cue.HEAL,
@@ -25,6 +25,7 @@ const ACTION_CUES := [DungeonAudio.Cue.HIT, DungeonAudio.Cue.GUARD, DungeonAudio
 @onready var _flee: Button = %Flee
 @onready var _continue: Button = %Continue
 @onready var _enemy_delay: Timer = $EnemyDelay
+@onready var _backdrop: TextureRect = $Backdrop
 
 var rules: BattleRules
 var _party_cards: Array[BattleFighterView] = []
@@ -47,22 +48,22 @@ func _ready() -> void:
 
 
 func start(battle: BattleRules, enemy_kind: DungeonFloor.EnemyKind, uses_checkpoint: bool = false,
-	audio: DungeonAudio = null, hold_controls: bool = false) -> void:
+	audio: DungeonAudio = null, hold_controls: bool = false, floor_number: int = 1) -> void:
 	rules = battle
 	_uses_checkpoint = uses_checkpoint
 	_audio = audio
 	_controls_held = hold_controls
+	_backdrop.modulate = ARENA_TINTS[floor_number - 1]
 	for index: int in rules.party.size():
 		var fighter: BattleRules.Fighter = rules.party[index]
-		var portrait: int = fighter.portrait if fighter.portrait >= 0 else PARTY_PORTRAITS[index % PARTY_PORTRAITS.size()]
-		var card: BattleFighterView = _add_card(portrait, PARTY_SLOTS[index], 66.0, false)
+		var model: String = ActorArt.model(fighter, "rook" if index == 0 else "mira")
+		var card: BattleFighterView = _add_card(model, PARTY_SLOTS[index], 58.0 if fighter.is_pet else 64.0, false)
 		if index >= 2:
 			_battlefield.move_child(card, 0)
 		_party_cards.append(card)
-	var enemy_size := 130.0 if enemy_kind == DungeonFloor.EnemyKind.BOSS else 100.0
-	_enemy_card = _add_card(PrototypeArt.enemy_icon(enemy_kind), ENEMY_SLOT, enemy_size, true)
-	if PrototypeArt.has_monster_shape(enemy_kind):
-		_enemy_card.set_monster_shape(enemy_kind)
+	var enemy_size := 110.0 if enemy_kind == DungeonFloor.EnemyKind.BOSS else 91.0
+	var enemy_model: String = ActorArt.model(rules.enemy, CampaignRun.ENEMY_IDS[enemy_kind])
+	_enemy_card = _add_card(enemy_model, ENEMY_SLOT, enemy_size, true)
 	_render()
 
 
@@ -83,14 +84,14 @@ func show_floor_clock(remaining: String) -> void:
 	_floor_clock.show()
 
 
-func _add_card(portrait: int, slot: Vector2, sprite_size: float, opposing: bool) -> BattleFighterView:
+func _add_card(model: String, slot: Vector2, sprite_size: float, opposing: bool) -> BattleFighterView:
 	var card: BattleFighterView = FIGHTER_CARD.instantiate() as BattleFighterView
 	_battlefield.add_child(card)
 	card.set_anchor_and_offset(SIDE_RIGHT, slot.x, 0.0)
 	card.set_anchor_and_offset(SIDE_BOTTOM, slot.y, 0.0)
 	card.set_anchor_and_offset(SIDE_LEFT, slot.x, 0.0)
 	card.set_anchor_and_offset(SIDE_TOP, slot.y, 0.0)
-	card.set_portrait(portrait, opposing, sprite_size)
+	card.set_model(model, opposing, sprite_size)
 	return card
 
 
@@ -135,7 +136,7 @@ func _present_action(command: BattleRules.Command, actor: BattleRules.Fighter,
 	_animating = true
 	_lock_commands()
 	_card_for(actor).perform(command)
-	await get_tree().create_timer(0.105).timeout
+	await get_tree().create_timer(BattleFighterView.CONTACT_TIME).timeout
 	if _audio != null:
 		_audio.play_cue(ACTION_CUES[command])
 	if target != null:
@@ -151,7 +152,7 @@ func _present_action(command: BattleRules.Command, actor: BattleRules.Fighter,
 				label = "Guard"
 		_card_for(target).impact(kind, label)
 	_update_fighters(actor)
-	await get_tree().create_timer(0.205).timeout
+	await get_tree().create_timer(0.28).timeout
 	_animating = false
 	_render()
 

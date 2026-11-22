@@ -19,7 +19,6 @@ func make_fighter(id: String) -> BattleRules.Fighter:
 	var fighter := BattleRules.Fighter.new(definition.name, definition.hp, definition.power, definition.speed)
 	fighter.id = id
 	fighter.is_pet = definition.get("pet", false)
-	fighter.portrait = definition.get("portrait", -1)
 	fighter.wound = definition.get("wound", "")
 	fighter.natural_armor = definition.get("armor", 0)
 	fighter.entrance = definition.get("entrance", "")

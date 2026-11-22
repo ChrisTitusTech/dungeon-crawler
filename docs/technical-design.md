@@ -3,7 +3,7 @@
 ## Implemented through Milestone 1
 
 - The project pins Godot 4.7.2 stable and uses statically typed GDScript. [Prerequisites](../PREREQUISITES.md)
-- A 640×360 game canvas opens in a 1280×720 window. Integer canvas-item scaling keeps sprites sharp while the UI renders at window resolution. `TileMapLayer` draws the exploration grid as 32×16 isometric diamonds. The dungeon view draws joined walls, torches, and 48-pixel character sprites in depth order.
+- A 640×360 logical canvas opens in a 1280×720 window. The tile map converts grid positions to 32×16 isometric diamonds. The dungeon view draws beveled stone tiles, raised walls, torchlight, and actors in depth order.
 - `DungeonFloor` owns movement, field of view, explored cells, and enemy AI. `BattleRules` resolves initiative and combat. `DungeonGame` carries party HP and tonics between the exploration and battle scenes.
 - A Godot `Resource` defines the hand-built test floor. The movement map supports keyboard, gamepad, and mouse. Battle menus use built-in UI actions and pointer input.
 - GUT 9.7.1 covers project setup, dungeon rules, combat rules, and scene integration. GitHub Actions runs the tests and exports Windows and Linux release builds. [CI workflow](../.github/workflows/ci.yml)
@@ -20,7 +20,7 @@
 - Floors 2 and 3 use authored layouts with their own bosses. `CampaignRun.escape()` swaps the dungeon and refuge after the current boss is beaten and the player uses the stairs. Party state, inventory, reputation, and contracts carry forward. The next floor starts at its refuge with a full clock and fresh enemies, fog of war, and loot sites. `DungeonGame` saves on arrival and records a completed run at the end of Floor 3.
 - The Floor 1 catalog defines rival factions, truce thresholds, recipes, material drops, and guild contracts with victory thresholds. `CampaignRun` applies reputation to live dungeon enemies and records victories and contract status in checkpoints.
 - The refuge positions the workbench, Watch envoy, and contract board as physical interactions. The workbench checks all ingredients before spending them. Each active contract pays once when a victory meets its terms.
-- `DungeonView` advances the camera and actor positions on the same step clock. Holding a direction chains steps while carrying forward the unused fraction of the frame. Ground tiles update when their visibility changes. `BattleView` places combatants in opposing formations over the vault image and locks commands during feedback animations. Scene fades cover the presentation swap at doors and encounter boundaries. [Vault image](../assets/battle_vault.png)
+- `DungeonView` advances the camera and actor positions on the same step clock. Holding a direction chains steps while carrying forward the unused fraction of the frame. The ground redraws when visibility changes. Exploration and combat draw the same articulated models from `ActorArt`. Combat adds windup, recovery, recoil, guard, and defeat poses over the arena, with command input locked during feedback. [Arena artwork](../assets/battle_arena.webp)
 - `DungeonAudio` crossfades original exploration, refuge, and battle loops, plays matching cues, and stores separate music and effects levels under `user://`. The audio assets use Git LFS.
 
 ## Planned architecture

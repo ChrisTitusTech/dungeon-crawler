@@ -3,18 +3,19 @@ extends Node2D
 
 signal movement_finished
 
-const STONE := preload("res://assets/tactics_stone.png")
-const STONE_TILE_SIZE := 32
-const WALL_OFFSET := Vector2(16, 16)
-const WALL_CONNECTIONS: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]
-const REMEMBERED := Color(0.46, 0.49, 0.58)
 const PARTY_MARK := Color(0.47, 0.88, 0.78, 0.72)
 const ENEMY_MARK := Color(0.98, 0.55, 0.43, 0.7)
 const STEP_TIME := 0.13
-const FLOOR_TINTS := [Color.WHITE, Color("#b9a3cf"), Color("#9ebbc7")]
+const STONE_COLORS := [Color("#5e6069"), Color("#665776"), Color("#46616a")]
+const PARTY_OFFSETS := [Vector2(7, 8), Vector2(-12, 2), Vector2(22, -4), Vector2(-25, -6)]
+const TILE_TOP := Vector2(0, -8)
+const TILE_LEFT := Vector2(-16, 0)
+const TILE_RIGHT := Vector2(16, 0)
+const TILE_BOTTOM := Vector2(0, 8)
 
 @onready var _tiles: TileMapLayer = $Tiles
 @onready var _camera: Camera2D = $Camera
+@onready var _ground: Node2D = $Ground
 
 var _floor: DungeonFloor
 var _party: Array[BattleRules.Fighter]
@@ -29,28 +30,47 @@ var _visible_cells: Dictionary[Vector2i, bool] = {}
 var _step_progress: float = 1.0
 var _moving: bool
 var _ambient_time: float
-var _floor_tint := Color.WHITE
+var _stone_color: Color = STONE_COLORS[0]
+var _torch_glow: GradientTexture2D
 var _ambient_frame: int
+var _party_facing: float = 1.0
+
+
+func _ready() -> void:
+	_ground.draw.connect(_draw_ground)
+	get_viewport().size_changed.connect(_ground.queue_redraw)
+	var falloff := Gradient.new()
+	falloff.offsets = PackedFloat32Array([0.0, 0.38, 1.0])
+	falloff.colors = PackedColorArray([Color("#ffcd84"), Color(0.98, 0.51, 0.22, 0.27), Color(0.79, 0.32, 0.16, 0)])
+	_torch_glow = GradientTexture2D.new()
+	_torch_glow.gradient = falloff
+	_torch_glow.width = 128
+	_torch_glow.height = 128
+	_torch_glow.fill = GradientTexture2D.FILL_RADIAL
+	_torch_glow.fill_from = Vector2(0.5, 0.5)
+	_torch_glow.fill_to = Vector2(1, 0.5)
 
 
 func load_floor(floor_state: DungeonFloor, party: Array[BattleRules.Fighter], campaign: CampaignRun = null) -> void:
 	_floor = floor_state
 	_party = party
 	_campaign = campaign
-	_floor_tint = Color.WHITE if campaign == null or campaign.at_camp() else FLOOR_TINTS[campaign.floor_number - 1]
-	_tiles.modulate = _floor_tint
+	_stone_color = Color("#706150") if campaign != null and campaign.at_camp() else STONE_COLORS[0]
+	if campaign != null and not campaign.at_camp():
+		_stone_color = STONE_COLORS[campaign.floor_number - 1]
 	_moving = false
 	_player_cell = floor_state.player
 	_enemy_cells.clear()
 	_visible_cells.clear()
 	_paint_order.clear()
-	_tiles.clear()
 	refresh()
 
 
 func refresh(animate: bool = false) -> bool:
 	_player_from = _player_cell
 	_player_cell = _floor.player
+	if _player_from != _player_cell:
+		_party_facing = _facing(_player_from, _player_cell)
 	_enemy_from = _enemy_cells.duplicate()
 	_enemy_cells.clear()
 	_previous_visibility = _visible_cells
@@ -76,28 +96,45 @@ func is_moving() -> bool:
 
 func _refresh_tiles() -> void:
 	if _paint_order.size() != _floor.explored.size():
-		if _paint_order.is_empty():
-			for cell: Vector2i in _floor.explored:
-				if not _visible_cells.has(cell):
-					_set_floor_tile(cell, 1)
 		_paint_order = _floor.explored.keys()
 		_paint_order.sort_custom(func(left: Vector2i, right: Vector2i) -> bool:
 			var left_depth: int = left.x + left.y
 			var right_depth: int = right.x + right.y
 			return left.x < right.x if left_depth == right_depth else left_depth < right_depth
 		)
-	for cell: Vector2i in _previous_visibility:
-		if not _visible_cells.has(cell):
-			_set_floor_tile(cell, 1)
-	for cell: Vector2i in _visible_cells:
-		if not _previous_visibility.has(cell):
-			_set_floor_tile(cell, 0)
+	_ground.queue_redraw()
 
 
-func _set_floor_tile(cell: Vector2i, shading: int) -> void:
-	if not _floor.is_wall(cell):
-		var variant: int = (cell.x * 31 + cell.y * 17 + cell.x * cell.y * 7) % 7
-		_tiles.set_cell(cell, 0, Vector2i(variant if variant <= 2 else 0, 0), shading)
+func _draw_ground() -> void:
+	var window: Rect2 = _view_bounds()
+	for cell: Vector2i in _paint_order:
+		var center: Vector2 = _tiles.map_to_local(cell)
+		if not window.has_point(center) or _floor.is_wall(cell):
+			continue
+		var shade: Color = _tile_color(cell)
+		var seam: Color = shade.darkened(0.28)
+		var points := PackedVector2Array([center + TILE_TOP, center + TILE_RIGHT,
+			center + TILE_BOTTOM, center + TILE_LEFT])
+		_ground.draw_colored_polygon(points, seam)
+		for index: int in points.size():
+			points[index] = points[index].lerp(center, 0.06)
+		_ground.draw_colored_polygon(points, shade)
+		_ground.draw_line(points[3], points[0], shade.lightened(0.14), 0.65, true)
+		_ground.draw_line(points[0], points[1], shade.lightened(0.075), 0.65, true)
+		if _visible_cells.has(cell) and posmod(cell.x * 7 + cell.y * 11, 9) < 3:
+			_ground.draw_polyline(PackedVector2Array([center + Vector2(-8, 1), center + Vector2(-3, -1),
+				center + Vector2(0, 0), center + Vector2(5, -2)]), seam.lightened(0.08), 0.7, true)
+
+
+func _tile_color(cell: Vector2i) -> Color:
+	var variant: float = float(posmod(cell.x * 31 + cell.y * 17 + cell.x * cell.y, 13)) / 13.0
+	var stone: Color = _stone_color.lightened(variant * 0.13)
+	return stone if _visible_cells.has(cell) else stone.lerp(Color("#131822"), 0.67)
+
+
+func _view_bounds() -> Rect2:
+	var viewport_size: Vector2 = get_viewport_rect().size + Vector2(112, 112)
+	return Rect2(_camera.position - viewport_size * 0.5, viewport_size)
 
 
 func _set_step_progress(progress: float) -> void:
@@ -120,7 +157,7 @@ func _process(delta: float) -> void:
 			# Carry the unused part of this frame into a chained step.
 			if _moving:
 				_set_step_progress(minf(progress - 1.0, 1.0))
-	var frame: int = floori(_ambient_time * 12.0)
+	var frame: int = floori(_ambient_time * 30.0)
 	if frame != _ambient_frame:
 		_ambient_frame = frame
 		queue_redraw()
@@ -142,8 +179,13 @@ func _draw() -> void:
 		var origin: Vector2i = _enemy_from.get(enemy, enemy.cell)
 		if _visible_cells.has(enemy.cell) or (is_moving() and _previous_visibility.has(origin)):
 			enemy_depths[_draw_depth(origin, enemy.cell)] = enemy
-	var viewport_size: Vector2 = get_viewport_rect().size + Vector2(112, 112)
-	var view := Rect2(_camera.position - viewport_size * 0.5, viewport_size)
+	var view: Rect2 = _view_bounds()
+	for cell: Vector2i in _visible_cells:
+		var center: Vector2 = _tiles.map_to_local(cell)
+		if view.has_point(center) and _floor.terrain_at(cell) == "t":
+			var pulse: float = sin(_ambient_time * 6.0 + center.x) * 0.035
+			draw_texture_rect(_torch_glow, Rect2(center - Vector2(57, 28), Vector2(114, 55)), false,
+				Color(1.0, 0.91, 0.76, 0.25 + pulse))
 	for cell: Vector2i in _paint_order:
 		if not view.has_point(_tiles.map_to_local(cell)):
 			continue
@@ -161,11 +203,9 @@ func _draw_cell(cell: Vector2i) -> void:
 	var is_visible: bool = _floor.visible.has(cell)
 
 	if _floor.is_wall(cell):
-		var tint: Color = Color.WHITE if is_visible else REMEMBERED
-		var region: Rect2 = _wall_region(cell)
-		draw_texture_rect_region(STONE, Rect2(center - WALL_OFFSET, region.size), region, tint * _floor_tint)
+		_draw_wall(cell, center)
 		if terrain == "t" and is_visible:
-			_draw_torch(center - Vector2(0, 8))
+			_draw_torch(center - Vector2(0, 13))
 		return
 
 	if terrain == "+":
@@ -181,15 +221,19 @@ func _draw_cell(cell: Vector2i) -> void:
 func _draw_party() -> void:
 	var center: Vector2 = _project_step(_player_from, _player_cell)
 	_draw_outline(center, Vector2(14, 7), PARTY_MARK)
-	var standing: int = 0
+	var standing: Array[int] = []
 	for index: int in _party.size():
+		if _party[index].hp > 0:
+			standing.append(index)
+	for slot: int in range(standing.size() - 1, -1, -1):
+		var index: int = standing[slot]
 		var member: BattleRules.Fighter = _party[index]
-		if member.hp == 0:
-			continue
-		var portrait: int = member.portrait if member.portrait >= 0 else mini(index, PrototypeArt.MIRA)
-		var offset := Vector2(standing * -7 + 6, standing * -3 + 4)
-		_draw_actor(center + offset, portrait, 34.0 if standing == 0 else 28.0, _stride(_player_from != _player_cell, standing))
-		standing += 1
+		var model: String = ActorArt.model(member, "rook" if index == 0 else "mira")
+		var height: float = 36.0 if slot == 0 else 32.0
+		if member.is_pet:
+			height = 27.0
+		_draw_actor(center + PARTY_OFFSETS[slot], model, height, _party_facing,
+			_pose(_player_from != _player_cell, slot))
 
 
 func _draw_enemy(enemy: DungeonFloor.Enemy) -> void:
@@ -203,18 +247,21 @@ func _draw_enemy(enemy: DungeonFloor.Enemy) -> void:
 	var accent: Color = ENEMY_MARK if enemy.hostile else PARTY_MARK
 	accent.a *= opacity
 	_draw_outline(center, Vector2(12, 6), accent)
-	if PrototypeArt.has_monster_shape(enemy.kind):
-		PrototypeArt.draw_monster(self, enemy.kind, center + Vector2(0, 4), 32.0, Color(1, 1, 1, opacity))
-		return
-	_draw_actor(center + Vector2(0, 4), PrototypeArt.enemy_icon(enemy.kind),
-		48.0 if enemy.kind == DungeonFloor.EnemyKind.BOSS else 35.0,
-		_stride(origin != enemy.cell), opacity)
+	var model: String = _campaign.enemy_id(enemy.kind) if _campaign != null else CampaignRun.ENEMY_IDS[enemy.kind]
+	var facing: float = _facing(origin, enemy.cell) if origin != enemy.cell else _facing(enemy.cell, _player_cell)
+	_draw_actor(center + Vector2(0, 4), model, 48.0 if enemy.kind == DungeonFloor.EnemyKind.BOSS else 36.0,
+		facing, _pose(origin != enemy.cell, enemy.home.x), opacity)
 
 
-func _stride(moved: bool, offset: int = 0) -> int:
+func _pose(moved: bool = false, offset: int = 0) -> ActorArt.Pose:
 	if moved and _step_progress < 1.0:
-		return PrototypeArt.STRIDE_A + ((floori(_step_progress * 2.0) + offset) % 2)
-	return PrototypeArt.IDLE
+		return ActorArt.Pose.new((float(_floor.turn % 2) + _step_progress) * PI + offset * 0.75, 1.0)
+	return ActorArt.Pose.new(_ambient_time * 4.0 + offset * 0.75)
+
+
+func _facing(from: Vector2i, to: Vector2i) -> float:
+	var horizontal: float = _tiles.map_to_local(to).x - _tiles.map_to_local(from).x
+	return -1.0 if horizontal < 0.0 else 1.0
 
 
 func _draw_depth(origin: Vector2i, destination: Vector2i) -> Vector2i:
@@ -236,7 +283,7 @@ func _draw_landmark(cell: Vector2i, center: Vector2, terrain: String) -> void:
 			"L": _draw_chest(center)
 			"G":
 				_draw_outline(center, Vector2(10, 5), PARTY_MARK)
-				_draw_actor(center + Vector2(0, 3), PrototypeArt.GUARD, 33.0)
+				_draw_actor(center + Vector2(0, 3), "guard", 34.0, 1.0, _pose(false, 3))
 			"W": _draw_workbench(center)
 			"A": _draw_sponsor_board(center)
 		return
@@ -251,10 +298,10 @@ func _draw_landmark(cell: Vector2i, center: Vector2, terrain: String) -> void:
 			_draw_chest(center)
 		elif terrain == "R":
 			_draw_outline(center, Vector2(10, 5), PARTY_MARK)
-			_draw_actor(center + Vector2(0, 3), PrototypeArt.SABLE, 31.0)
+			_draw_actor(center + Vector2(0, 3), "sable", 33.0, 1.0, _pose(false, 1))
 		elif terrain == "P":
 			_draw_outline(center, Vector2(10, 5), PARTY_MARK)
-			_draw_actor(center + Vector2(0, 3), PrototypeArt.RAT, 24.0)
+			_draw_actor(center + Vector2(0, 3), "cinder", 27.0, 1.0, _pose(false, 2))
 		elif terrain == "!":
 			_draw_outline(center, Vector2(10, 5), Color("#b39df4"))
 			draw_rect(Rect2(center + Vector2(-5, -12), Vector2(10, 9)), Color("#514071"))
@@ -327,16 +374,26 @@ func _draw_sponsor_board(center: Vector2) -> void:
 		draw_rect(Rect2(center + Vector2(x, -12), Vector2(4, 7)), Color("#e5d0a4"))
 
 
-func _wall_region(cell: Vector2i) -> Rect2:
-	var connections: int = 0
-	for index: int in WALL_CONNECTIONS.size():
-		var neighbor: Vector2i = cell + WALL_CONNECTIONS[index]
-		if _floor.explored.has(neighbor) and _floor.is_wall(neighbor):
-			connections |= 1 << index
-
-	# The floor variants occupy the first row. The next four rows store the wall masks.
-	var atlas_cell := Vector2(connections & 3, 1 + (connections >> 2))
-	return Rect2(atlas_cell * STONE_TILE_SIZE, Vector2.ONE * STONE_TILE_SIZE)
+func _draw_wall(cell: Vector2i, center: Vector2) -> void:
+	var rise := Vector2(0, 15)
+	var top: Vector2 = center - rise
+	var shade: Color = _tile_color(cell)
+	var near: Vector2 = center + TILE_BOTTOM
+	var left: Vector2 = center + TILE_LEFT
+	var right: Vector2 = center + TILE_RIGHT
+	draw_colored_polygon(PackedVector2Array([left - rise, near - rise, near, left]), shade.darkened(0.37))
+	draw_colored_polygon(PackedVector2Array([near - rise, right - rise, right, near]), shade.darkened(0.53))
+	draw_colored_polygon(PackedVector2Array([top + TILE_TOP, top + TILE_RIGHT,
+		top + TILE_BOTTOM, top + TILE_LEFT]), shade.darkened(0.13))
+	draw_line(left - rise, near - rise, shade.lightened(0.12), 0.75, true)
+	draw_line(near - rise, right - rise, shade.lightened(0.035), 0.75, true)
+	if _visible_cells.has(cell):
+		var grout: Color = shade.darkened(0.69)
+		draw_polyline(PackedVector2Array([left - rise * 0.49, near - rise * 0.49, right - rise * 0.49]), grout, 0.9, true)
+		var joint: Vector2 = left.lerp(near, 0.45)
+		draw_line(joint - rise, joint - rise * 0.50, grout, 0.75, true)
+		joint = near.lerp(right, 0.56)
+		draw_line(joint - rise * 0.50, joint, grout, 0.75, true)
 
 
 func _draw_outline(center: Vector2, radii: Vector2, color: Color) -> void:
@@ -362,12 +419,8 @@ func _draw_torch(center: Vector2) -> void:
 		Color(1.0, 0.68, 0.36, 0.72 * (1.0 - spark)))
 
 
-func _draw_actor(feet: Vector2, index: int, sprite_size: float, pose: int = PrototypeArt.IDLE, opacity: float = 1.0) -> void:
+func _draw_actor(feet: Vector2, model: String, sprite_size: float, facing: float,
+	pose: ActorArt.Pose, opacity: float = 1.0) -> void:
 	draw_set_transform(feet, 0.0, Vector2(1.0, 0.32))
-	draw_circle(Vector2.ZERO, 8, Color(0.04, 0.05, 0.08, 0.5 * opacity))
-	draw_set_transform(Vector2.ZERO)
-	var anchor: float = 0.82 if index == PrototypeArt.RAT else 0.89
-	var bob: float = roundf(sin(_ambient_time * 4.0 + index * 0.9) * 0.6) if pose == PrototypeArt.IDLE else 0.0
-	var position_offset := Vector2(sprite_size * 0.5, sprite_size * anchor + bob)
-	var rect := Rect2(feet - position_offset, Vector2.ONE * sprite_size)
-	draw_texture_rect_region(PrototypeArt.ATLAS, rect, PrototypeArt.region(index, pose), Color(1, 1, 1, opacity), false, true)
+	draw_circle(Vector2.ZERO, sprite_size * 0.28, Color(0.04, 0.05, 0.08, 0.52 * opacity), true, -1.0, true)
+	ActorArt.draw(self, model, feet, sprite_size, facing, pose, Color(1, 1, 1, opacity))

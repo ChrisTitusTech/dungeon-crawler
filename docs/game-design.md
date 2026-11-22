@@ -28,7 +28,7 @@ Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dunge
 | Death | Party-member death is permanent; a full wipe reloads the last safe room |
 | Dungeon systems | System AI announcer, floor collapse timers, loot boxes, achievements, guild contracts, safe rooms |
 | Simulation | Factions, crafting, injuries. No digging or destructible terrain |
-| Art | 32×16 stone tiles and shaded 48-pixel character sprites |
+| Art | Isometric stonework, articulated 2D actors, and illustrated battle backgrounds |
 | UI | Minimap; keyboard and mouse plus gamepad |
 | Platforms | Windows and Linux, single-player |
 | Engine | Latest stable Godot 4.x at project start, GDScript |

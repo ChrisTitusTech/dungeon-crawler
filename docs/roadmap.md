@@ -58,7 +58,7 @@ Work items in order through the demo.
 ## Risks and open questions
 
 - **Scope is the main risk.** 18 floors with simulation systems is a multi-year project for a small team. The milestones are ordered so that each one is shippable and the game can be judged after Milestone 2.
-- **Production art and audio** remain open. The prototype uses an adapted stone atlas and original character sprites. [Texture credits](../assets/tactics_stone.LICENSE.txt)
+- **Production art and audio** remain open. The demo now uses articulated 2D characters, distinct boss silhouettes, and an illustrated arena. Dedicated arena art and audio for each floor remain open.
 - **Title, setting, and tone bible** are still needed, including the System AI's voice. Humour depends on the writing, so writing needs budgeted time.
 - **Battle pacing:** separate battle screens can make frequent fights tedious. Visible enemies, fleeing, and fast animations mitigate this; the vertical slice must test it.
 - **Simulation versus readability:** factions and injuries must produce outcomes the player can see and understand, or they are wasted work.

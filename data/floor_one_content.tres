@@ -5,23 +5,23 @@
 [resource]
 script = ExtResource("1_content")
 heroes = {
-"rook": {"name": "Rook", "hp": 28, "power": 7, "speed": 9, "portrait": 0, "skill": "cleave"},
-"mira": {"name": "Mira", "hp": 22, "power": 6, "speed": 13, "portrait": 1, "skill": "trip"},
-"sable": {"name": "Sable", "hp": 25, "power": 6, "speed": 11, "portrait": 4, "skill": "brace"},
-"cinder": {"name": "Cinder", "hp": 24, "power": 8, "speed": 14, "portrait": 2, "skill": "ankle_bite", "pet": true}
+"rook": {"name": "Rook", "hp": 28, "power": 7, "speed": 9, "skill": "cleave"},
+"mira": {"name": "Mira", "hp": 22, "power": 6, "speed": 13, "skill": "trip"},
+"sable": {"name": "Sable", "hp": 25, "power": 6, "speed": 11, "skill": "brace"},
+"cinder": {"name": "Cinder", "hp": 24, "power": 8, "speed": 14, "skill": "ankle_bite", "pet": true}
 }
 foes = {
-"rat": {"name": "Ashfang Dire Rat", "hp": 17, "power": 5, "speed": 8, "portrait": 2, "xp": 7, "drop": "tonic", "faction": "ashfang", "material": "ashfang_pelt"},
-"guard": {"name": "Barrow Sentinel", "hp": 32, "power": 9, "speed": 12, "portrait": 3, "xp": 15, "drop": "bandage", "wound": "arms", "faction": "watch", "material": "iron_scrap"},
-"goblin": {"name": "Latchknife Goblin", "hp": 21, "power": 6, "speed": 14, "portrait": 3, "xp": 9, "drop": "bandage", "faction": "scrappers", "material": "iron_scrap", "entrance": "A Latchknife Goblin snaps its scrap shears."},
+"rat": {"name": "Ashfang Dire Rat", "hp": 17, "power": 5, "speed": 8, "xp": 7, "drop": "tonic", "faction": "ashfang", "material": "ashfang_pelt"},
+"guard": {"name": "Barrow Sentinel", "hp": 32, "power": 9, "speed": 12, "xp": 15, "drop": "bandage", "wound": "arms", "faction": "watch", "material": "iron_scrap"},
+"goblin": {"name": "Latchknife Goblin", "hp": 21, "power": 6, "speed": 14, "xp": 9, "drop": "bandage", "faction": "scrappers", "material": "iron_scrap", "entrance": "A Latchknife Goblin snaps its scrap shears."},
 "slime": {"name": "Amber Slime", "hp": 38, "power": 8, "speed": 5, "armor": 2, "xp": 14, "drop": "tonic", "wound": "arms", "faction": "ashfang", "material": "bitterroot", "entrance": "Amber Slime oozes forward. Its thick rind blunts hits."},
 "spider": {"name": "Bellthread Spider", "hp": 29, "power": 10, "speed": 16, "xp": 15, "drop": "bandage", "wound": "legs", "faction": "ashfang", "material": "ashfang_pelt", "entrance": "The Bellthread Spider spins for your ankles."},
 "skeleton": {"name": "Ledger Skeleton", "hp": 43, "power": 11, "speed": 10, "armor": 2, "xp": 19, "drop": "tonic", "wound": "torso", "faction": "ossuary", "material": "iron_scrap", "entrance": "A Ledger Skeleton rattles the coins inside its ribs."},
 "mimic": {"name": "Prize Mimic", "hp": 46, "power": 12, "speed": 10, "xp": 22, "drop": "silver_box", "wound": "arms", "faction": "scrappers", "material": "iron_scrap", "entrance": "The prize chest opens first. It has teeth."},
 "gargoyle": {"name": "Gutter Gargoyle", "hp": 54, "power": 12, "speed": 7, "armor": 3, "xp": 23, "drop": "bandage", "wound": "head", "faction": "ossuary", "material": "iron_scrap", "entrance": "The Gutter Gargoyle unfolds from its stone perch."},
-"warden": {"name": "Sir Aldren", "hp": 96, "power": 15, "speed": 15, "portrait": 5, "xp": 35, "drop": "warden_blade", "wound": "torso", "faction": "watch", "material": "iron_scrap"},
-"marshal": {"name": "Marshal Ysra", "hp": 118, "power": 17, "speed": 14, "portrait": 5, "xp": 45, "drop": "marshal_mail", "wound": "arms", "faction": "watch", "material": "iron_scrap"},
-"regent": {"name": "Lord Veyr", "hp": 142, "power": 19, "speed": 17, "portrait": 5, "xp": 55, "drop": "silver_box", "wound": "legs", "faction": "watch", "material": "iron_scrap"}
+"warden": {"name": "Sir Aldren", "hp": 96, "power": 15, "speed": 15, "xp": 35, "drop": "warden_blade", "wound": "torso", "faction": "watch", "material": "iron_scrap"},
+"marshal": {"name": "Marshal Ysra", "hp": 118, "power": 17, "speed": 14, "xp": 45, "drop": "marshal_mail", "wound": "arms", "faction": "watch", "material": "iron_scrap"},
+"regent": {"name": "Lord Veyr", "hp": 142, "power": 19, "speed": 17, "xp": 55, "drop": "silver_box", "wound": "legs", "faction": "watch", "material": "iron_scrap"}
 }
 items = {
 "tonic": {"name": "Tonic", "description": "Heal a standing ally for up to 9 HP."},
