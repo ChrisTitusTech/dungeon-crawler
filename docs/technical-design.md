@@ -1,12 +1,16 @@
 # Technical Design
 
-- **Engine:** Godot 4.7.2 stable, pinned (see [PREREQUISITES.md](../PREREQUISITES.md)). GDScript with static typing throughout.
-- **Rendering:** 16x16 tiles, low internal resolution (for example 480x270) with integer scaling. `TileMapLayer` for maps.
-- **Architecture:** game rules live in plain GDScript classes separate from scenes, so combat, simulation, and generation can be unit-tested and run headless. Scenes present state and send commands.
-- **Data:** items, monsters, skills, recipes, factions, achievements, and announcer lines are data files (Godot `Resource` or JSON), not code. This is what makes 18 floors of content affordable.
-- **Autoloads:** game state, save manager, event bus, audio, and scene transitions.
-- **Events:** one event bus feeds achievements, viewer count, and the announcer, so new content only needs to listen for events.
-- **Generation:** seeded generator that places hand-crafted room templates and connects them with procedural rooms and corridors, with a connectivity check.
-- Godot input actions cover grid movement, tile selection, interaction, waiting, party, inventory, minimap, and pause. Movement uses WASD, arrow keys, the D-pad, or the left stick. The primary mouse button selects a tile. Menus use Godot's built-in UI actions and pointer input.
-- GUT 9.7.1 runs headless tests. GitHub Actions runs the tests and exports both Windows and Linux releases.
-- **Layout:** `scenes/`, `scripts/` (core, battle, world, sim, ui), `data/`, `assets/`, `tests/`, `docs/`.
+## Implemented through Milestone 1
+
+- The project pins Godot 4.7.2 stable and uses statically typed GDScript. [Prerequisites](../PREREQUISITES.md)
+- A 480×270 viewport with integer scaling draws the exploration grid as 32×16 isometric diamonds. `TileMapLayer` draws the flagstone floor. The dungeon view draws joined walls, torches, and 48-pixel character sprites in depth order.
+- `DungeonFloor` owns movement, field of view, explored cells, and enemy AI. `BattleRules` resolves initiative and combat. `DungeonGame` carries party HP and tonics between the exploration and battle scenes.
+- A Godot `Resource` defines the hand-built test floor. The movement map supports keyboard, gamepad, and mouse. Battle menus use built-in UI actions and pointer input.
+- GUT 9.7.1 covers project setup, dungeon rules, combat rules, and scene integration. GitHub Actions runs the tests and exports Windows and Linux release builds. [CI workflow](../.github/workflows/ci.yml)
+- The repository keeps scenes in `scenes/`, game and presentation code in `scripts/`, and content in `data/` and `assets/`. Tests and design documents live in `tests/` and `docs/`.
+
+## Planned architecture
+
+- Move items, monsters, skills, recipes, factions, achievements, and announcer lines into Godot `Resource` or JSON data files as their systems are built.
+- Use a seeded generator to connect hand-crafted room templates with procedural rooms and corridors, then check connectivity.
+- Introduce autoloads for game state, saving, events, audio, and scene transitions as those systems come online. Route achievement, viewer, and announcer updates through one event bus.

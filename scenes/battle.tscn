@@ -1,0 +1,110 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/battle_view.gd" id="1_battle"]
+[ext_resource type="Theme" path="res://data/prototype_theme.tres" id="2_theme"]
+
+[node name="Battle" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_battle")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.049, 0.071, 0.104, 1)
+
+[node name="Margins" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 10
+
+[node name="Content" type="VBoxContainer" parent="Margins"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Margins/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Battle"
+
+[node name="Initiative" type="PanelContainer" parent="Margins/Content"]
+layout_mode = 2
+
+[node name="Timeline" type="Label" parent="Margins/Content/Initiative"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Fighters" type="HBoxContainer" parent="Margins/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="LogPanel" type="PanelContainer" parent="Margins/Content"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+
+[node name="BattleLog" type="Label" parent="Margins/Content/LogPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+vertical_alignment = 1
+
+[node name="Commands" type="HBoxContainer" parent="Margins/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Attack" type="Button" parent="Margins/Content/Commands"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Attack"
+
+[node name="Defend" type="Button" parent="Margins/Content/Commands"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Halve the next hit before this fighter acts again."
+text = "Defend"
+
+[node name="Item" type="Button" parent="Margins/Content/Commands"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Spend one tonic to heal the most injured standing ally for up to 9 HP."
+text = "Item"
+
+[node name="Flee" type="Button" parent="Margins/Content/Commands"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Return to the dungeon. The enemy stays on the map."
+text = "Flee"
+
+[node name="Continue" type="Button" parent="Margins/Content"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+
+[node name="EnemyDelay" type="Timer" parent="."]
+wait_time = 0.45
+one_shot = true

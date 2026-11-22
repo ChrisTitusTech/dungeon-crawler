@@ -4,15 +4,21 @@ Working title: TBD. All names, characters, and setting are original IP; Dungeon 
 
 ## Overview
 
-Build a commercial single-player 2D party RPG in Godot (GDScript) for Windows and Linux. The player is a contestant in a lethal, televised 18-floor dungeon run by a snarky System AI. Exploration is top-down and tile-based with visible enemies; touching one opens a separate JRPG-style menu battle. A light Dwarf Fortress-style simulation (factions, crafting, body-part injuries) runs underneath.
+Build a commercial single-player 2D party RPG in Godot (GDScript) for Windows and Linux. The player is a contestant in a lethal, televised 18-floor dungeon run by a snarky System AI. The isometric exploration view shows enemies on the grid, and touching one opens a separate JRPG-style menu battle. A light Dwarf Fortress-style simulation (factions, crafting, body-part injuries) runs underneath.
 
 Approach: prove the core loop in a one-floor vertical slice, widen to a three-floor demo, ship to Steam Early Access, then add floors and systems until all 18 floors are done for 1.0.
+
+## Prototype status
+
+Milestones 0 and 1 are complete. Rook and Mira can explore a hand-built dungeon with fog of war and a minimap, then fight four encounters using Attack, Defend, Item, and Flee. HP and tonics carry between fights. A party wipe restarts the test map.
+
+The first campaign floor is the Milestone 2 vertical slice. It brings in procedural rooms, a safe room and save point, the collapse timer, party progression, gear, injuries, the boss, and the first show events. [Roadmap](roadmap.md)
 
 ## Key decisions
 
 | Area | Decision |
 | --- | --- |
-| View | Top-down, tile/grid-based, in the style of Caves of Qud |
+| View | 2D isometric projection of a square tile grid |
 | Combat | Turn-based menu battles on a separate battle screen |
 | Encounters | Enemies visible on the map; contact starts the battle |
 | Party | Up to 4: a created main character plus recruits and pets found in the dungeon |
@@ -22,7 +28,7 @@ Approach: prove the core loop in a one-floor vertical slice, widen to a three-fl
 | Death | Party-member death is permanent; a full wipe reloads the last safe room |
 | Show framing | System AI announcer, floor collapse timers, loot boxes, achievements, viewers and sponsors, safe rooms |
 | Simulation | Factions, crafting, injuries. No digging or destructible terrain |
-| Art | 16x16 pixel sprites with a Qud-like limited palette |
+| Art | 32×16 stone tiles and shaded 48-pixel character sprites |
 | UI | Minimap; keyboard and mouse plus gamepad |
 | Platforms | Windows and Linux, single-player |
 | Engine | Latest stable Godot 4.x at project start, GDScript |

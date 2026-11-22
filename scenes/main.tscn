@@ -1,4 +1,10 @@
-[gd_scene format=3]
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/dungeon_game.gd" id="1_game"]
+[ext_resource type="Script" path="res://scripts/world/dungeon_view.gd" id="2_dungeon"]
+[ext_resource type="TileSet" path="res://data/prototype_tileset.tres" id="3_tiles"]
+[ext_resource type="Theme" path="res://data/prototype_theme.tres" id="4_theme"]
+[ext_resource type="Script" path="res://scripts/ui/dungeon_minimap.gd" id="5_minimap"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -7,15 +13,112 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_game")
 
-[node name="Title" type="Label" parent="."]
-layout_mode = 1
+[node name="Dungeon" type="Node2D" parent="."]
+script = ExtResource("2_dungeon")
+
+[node name="Tiles" type="TileMapLayer" parent="Dungeon"]
+z_index = -1
+tile_set = ExtResource("3_tiles")
+
+[node name="Camera" type="Camera2D" parent="Dungeon"]
+
+[node name="Interface" type="CanvasLayer" parent="."]
+
+[node name="HUD" type="Control" parent="Interface"]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 24
+mouse_filter = 2
+theme = ExtResource("4_theme")
+
+[node name="Header" type="PanelContainer" parent="Interface/HUD"]
+layout_mode = 1
+anchor_right = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 39.0
+mouse_filter = 2
+
+[node name="Readout" type="HBoxContainer" parent="Interface/HUD/Header"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Interface/HUD/Header/Readout"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
 text = "Dungeon Crawler"
+
+[node name="Roster" type="Label" parent="Interface/HUD/Header/Readout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.57, 0.88, 0.8, 1)
 horizontal_alignment = 1
-vertical_alignment = 1
+
+[node name="Remaining" type="Label" parent="Interface/HUD/Header/Readout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.68, 0.55, 1)
+
+[node name="Turn" type="Label" parent="Interface/HUD/Header/Readout"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="MapPanel" type="PanelContainer" parent="Interface/HUD"]
+unique_name_in_owner = true
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -110.0
+offset_top = 45.0
+offset_right = -10.0
+offset_bottom = 99.0
+grow_horizontal = 0
+mouse_filter = 2
+
+[node name="Minimap" type="Control" parent="Interface/HUD/MapPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(84, 44)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("5_minimap")
+
+[node name="Footer" type="PanelContainer" parent="Interface/HUD"]
+layout_mode = 1
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -44.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Actions" type="HBoxContainer" parent="Interface/HUD/Footer"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Status" type="Label" parent="Interface/HUD/Footer/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Wait" type="Button" parent="Interface/HUD/Footer/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Wait [Q]"
+
+[node name="Map" type="Button" parent="Interface/HUD/Footer/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Map [M]"

@@ -1,0 +1,38 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/battle_fighter_view.gd" id="1_fighter"]
+
+[node name="BattleFighter" type="PanelContainer"]
+size_flags_horizontal = 3
+script = ExtResource("1_fighter")
+
+[node name="Stats" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="FighterName" type="Label" parent="Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
+
+[node name="Portrait" type="TextureRect" parent="Stats"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 42)
+texture_filter = 1
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HealthLabel" type="Label" parent="Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="HealthBar" type="ProgressBar" parent="Stats"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+show_percentage = false

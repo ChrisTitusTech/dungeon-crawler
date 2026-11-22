@@ -1,0 +1,22 @@
+[gd_resource type="TileSet" load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/tactics_stone.png" id="1_atlas"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_dungeon"]
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+0:0/1 = 1
+0:0/1/modulate = Color(0.46, 0.49, 0.58, 1)
+1:0/0 = 0
+1:0/1 = 1
+1:0/1/modulate = Color(0.46, 0.49, 0.58, 1)
+2:0/0 = 0
+2:0/1 = 1
+2:0/1/modulate = Color(0.46, 0.49, 0.58, 1)
+
+[resource]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(32, 16)
+sources/0 = SubResource("TileSetAtlasSource_dungeon")
