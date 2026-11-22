@@ -2,18 +2,19 @@
 
 Working title. A single-player 2D party RPG for Windows and Linux, built in Godot 4 with GDScript.
 
-You are a contestant in a lethal, televised 18-floor dungeon run by a snarky System AI. Explore isometric floors with a party of up to four, fight visible enemies in JRPG-style menu battles, and survive each floor before it collapses. Factions, crafting, and body-part injuries run underneath.
+Your party must survive an 18-floor dungeon run by a snarky System AI. Explore isometric floors with a party of up to four, fight visible enemies in JRPG-style menu battles, and survive each floor before it collapses. Factions, crafting, and body-part injuries run underneath.
 
 ## Status
 
-**Milestones 0 through 2 are complete.** Start beside the safe-room door, recruit Sable, and defeat Sir Aldren, the Hollow Castellan, before Floor 1 collapses. Milestone 3 is in progress with Floor 1 faction reputation, crafting, and sponsor contracts. [Roadmap](docs/roadmap.md)
+**Milestones 0 through 2 are complete.** Start beside the safe-room door, recruit Sable, and defeat Sir Aldren, the Hollow Castellan, before Floor 1 collapses. Milestone 3 is in progress. Floor 1 has faction reputation, crafting, guild contracts, and the first art and audio pass. [Roadmap](docs/roadmap.md)
 
 ## Documentation
 
-- [Game design](docs/game-design.md): what the game is and how its systems work.
-- [Technical design](docs/technical-design.md): engine, architecture, and project layout.
-- [Roadmap](docs/roadmap.md): milestones, backlog, risks, and open questions.
-- [Prerequisites](PREREQUISITES.md): tools to install and how to verify them.
+- [PC handoff](docs/handoff.md) covers cloning, restoring local saves, and picking up Milestone 3.
+- [Game design](docs/game-design.md) describes the game and its systems.
+- [Technical design](docs/technical-design.md) explains the architecture and project layout.
+- [Roadmap](docs/roadmap.md) tracks milestones and open work.
+- [Prerequisites](PREREQUISITES.md) lists the tools needed on Windows and Linux.
 
 ## Getting started
 
@@ -23,9 +24,9 @@ Install the tools, then open `project.godot` in the editor or run `godot --edito
 
 Choose one of three save slots. New runs generate a 118×84 dungeon with varied rooms, paths, and encounters. Use the marked dungeon door to enter the separate safe-room map. Walk to a bed to fully heal standing party members and treat wounds, or use the dining table to restore up to half their maximum HP.
 
-Entering the safe room saves a checkpoint. Use the chest to save again or open reward boxes. Use the interior door to return to the dungeon tile you left. The collapse clock advances with movement and waiting on the dungeon floor. A wipe or collapse returns the party to its last safe-room checkpoint.
+Entering the safe room saves a checkpoint. Use the chest to save again or open reward boxes. Use the interior door to return to the dungeon tile you left. Each floor starts with 30 minutes. The countdown runs during exploration and battle, even while you stand still, and pauses in the safe room and campaign menus. A wipe or collapse lets you reload your last safe-room checkpoint with its saved time remaining.
 
-At the workbench, turn pelts, iron scrap, and bitterroot into supplies or a Tempered Longsword. Hunting Ashfang beasts or offering bandages to the Watch envoy can earn a truce with Barrow Sentinels. Wins earn viewers, and victories that use a skill or end with an ally at low HP draw more. Visit the sponsor board to see offers and their battle conditions.
+At the workbench, turn pelts, iron scrap, and bitterroot into supplies or a Tempered Longsword. Hunting Ashfang beasts or offering bandages to the Watch envoy can earn a truce with Barrow Sentinels. Visit the refuge contract board to see guild offers and their battle conditions. The two Floor 1 contracts unlock after two and five victories.
 
 Party HP, injuries, and equipment carry between fights. The pack lets you use tonics, treat wounds, and equip loot. Spend earned stat points from the Party menu. Each fighter gets one use of their skill per battle. After defeating Sir Aldren, use the stairs to clear the floor.
 
@@ -40,11 +41,11 @@ Party HP, injuries, and equipment carry between fights. The pack lets you use to
 | Choose a battle command | Arrow keys and Enter | D-pad and A | Click a command |
 | Pause | P | Start / Menu | |
 
-Movement follows the diagonal tile edges of the isometric view.
+Movement follows the diagonal tile edges of the isometric view. Hold a direction for continuous movement. Battles place the party on the right and the enemy on the left in a torchlit vault.
 
 The game opens in a 1280×720 window. The 640×360 game canvas scales in whole steps to preserve sharp pixel art.
 
-Tap or hold a direction to move. The save-slot and pause menus offer separate music and effects volume controls.
+The save-slot and pause menus offer separate music and effects volume controls.
 
 Fleeing leaves the enemy on the map and gives the party one turn to move away. To revisit the original hand-built prototype, run `godot --path . -- --prototype`.
 

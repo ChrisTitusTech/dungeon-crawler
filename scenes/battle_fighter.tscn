@@ -1,55 +1,64 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/battle_fighter_view.gd" id="1_fighter"]
 [ext_resource type="Script" path="res://scripts/ui/battle_effect.gd" id="2_effect"]
 
-[node name="BattleFighter" type="PanelContainer"]
-size_flags_horizontal = 3
+[sub_resource type="StyleBoxFlat" id="Tag"]
+content_margin_left = 5.0
+content_margin_top = 2.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
+bg_color = Color(0.045, 0.064, 0.078, 0.91)
+border_width_bottom = 1
+border_color = Color(0.27, 0.32, 0.34, 0.9)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_left = 3
+corner_radius_bottom_right = 3
+
+[node name="BattleFighter" type="Control"]
+mouse_filter = 2
 script = ExtResource("1_fighter")
 
-[node name="Stats" type="VBoxContainer" parent="."]
-layout_mode = 2
-theme_override_constants/separation = 3
-
-[node name="FighterName" type="Label" parent="Stats"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 14
-horizontal_alignment = 1
-
-[node name="Stage" type="Control" parent="Stats"]
-custom_minimum_size = Vector2(0, 42)
-layout_mode = 2
-size_flags_vertical = 3
-mouse_filter = 2
-
-[node name="Portrait" type="TextureRect" parent="Stats/Stage"]
+[node name="Portrait" type="TextureRect" parent="."]
 unique_name_in_owner = true
 texture_filter = 1
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
 mouse_filter = 2
 expand_mode = 1
-stretch_mode = 5
 
-[node name="Effects" type="Control" parent="Stats/Stage"]
+[node name="Effects" type="Control" parent="."]
 unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
 mouse_filter = 2
 script = ExtResource("2_effect")
 
-[node name="HealthLabel" type="Label" parent="Stats"]
+[node name="Tag" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+offset_left = -51.0
+offset_top = 6.0
+offset_right = 51.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Tag")
+
+[node name="Stats" type="VBoxContainer" parent="Tag"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="FighterName" type="Label" parent="Tag/Stats"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 
-[node name="HealthBar" type="ProgressBar" parent="Stats"]
+[node name="HealthLabel" type="Label" parent="Tag/Stats"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 4)
 layout_mode = 2
+theme_override_font_sizes/font_size = 10
+horizontal_alignment = 1
+
+[node name="HealthBar" type="ProgressBar" parent="Tag/Stats"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+mouse_filter = 2
 show_percentage = false

@@ -26,7 +26,7 @@ var _enemy_from: Dictionary[DungeonFloor.Enemy, Vector2i] = {}
 var _previous_visibility: Dictionary[Vector2i, bool] = {}
 var _visible_cells: Dictionary[Vector2i, bool] = {}
 var _step_progress: float = 1.0
-var _movement: Tween
+var _moving: bool
 var _ambient_time: float
 var _ambient_frame: int
 
@@ -35,12 +35,11 @@ func load_floor(floor_state: DungeonFloor, party: Array[BattleRules.Fighter], ca
 	_floor = floor_state
 	_party = party
 	_campaign = campaign
-	if _movement != null and _movement.is_valid():
-		_movement.kill()
-	_movement = null
+	_moving = false
 	_player_cell = floor_state.player
 	_enemy_cells.clear()
 	_visible_cells.clear()
+	_paint_order.clear()
 	_tiles.clear()
 	refresh()
 
@@ -58,30 +57,43 @@ func refresh(animate: bool = false) -> bool:
 		if _enemy_from.get(enemy, enemy.cell) != enemy.cell:
 			moving = moving or _visible_cells.has(enemy.cell) or _previous_visibility.has(_enemy_from[enemy])
 
-	_paint_order = _floor.explored.keys()
-	_paint_order.sort_custom(func(left: Vector2i, right: Vector2i) -> bool:
-		var left_depth: int = left.x + left.y
-		var right_depth: int = right.x + right.y
-		return left.x < right.x if left_depth == right_depth else left_depth < right_depth
-	)
-	for cell: Vector2i in _floor.explored:
-		if not _floor.is_wall(cell):
-			var variant: int = (cell.x * 31 + cell.y * 17 + cell.x * cell.y * 7) % 7
-			var atlas_cell := Vector2i(variant if variant <= 2 else 0, 0)
-			var shading: int = 0 if _floor.visible.has(cell) else 1
-			_tiles.set_cell(cell, 0, atlas_cell, shading)
+	_refresh_tiles()
 	if animate and moving and DisplayServer.get_name() != "headless":
+		_moving = true
 		_set_step_progress(0.0)
-		_movement = create_tween()
-		_movement.tween_method(_set_step_progress, 0.0, 1.0, STEP_TIME)
-		_movement.finished.connect(_finish_movement)
 		return true
 	_set_step_progress(1.0)
 	return false
 
 
 func is_moving() -> bool:
-	return _movement != null
+	return _moving
+
+
+func _refresh_tiles() -> void:
+	if _paint_order.size() != _floor.explored.size():
+		if _paint_order.is_empty():
+			for cell: Vector2i in _floor.explored:
+				if not _visible_cells.has(cell):
+					_set_floor_tile(cell, 1)
+		_paint_order = _floor.explored.keys()
+		_paint_order.sort_custom(func(left: Vector2i, right: Vector2i) -> bool:
+			var left_depth: int = left.x + left.y
+			var right_depth: int = right.x + right.y
+			return left.x < right.x if left_depth == right_depth else left_depth < right_depth
+		)
+	for cell: Vector2i in _previous_visibility:
+		if not _visible_cells.has(cell):
+			_set_floor_tile(cell, 1)
+	for cell: Vector2i in _visible_cells:
+		if not _previous_visibility.has(cell):
+			_set_floor_tile(cell, 0)
+
+
+func _set_floor_tile(cell: Vector2i, shading: int) -> void:
+	if not _floor.is_wall(cell):
+		var variant: int = (cell.x * 31 + cell.y * 17 + cell.x * cell.y * 7) % 7
+		_tiles.set_cell(cell, 0, Vector2i(variant if variant <= 2 else 0, 0), shading)
 
 
 func _set_step_progress(progress: float) -> void:
@@ -91,15 +103,19 @@ func _set_step_progress(progress: float) -> void:
 	queue_redraw()
 
 
-func _finish_movement() -> void:
-	_movement = null
-	movement_finished.emit()
-
-
 func _process(delta: float) -> void:
 	if _floor == null or not is_visible_in_tree() or DisplayServer.get_name() == "headless":
 		return
 	_ambient_time += delta
+	if _moving:
+		var progress: float = _step_progress + delta / STEP_TIME
+		_set_step_progress(minf(progress, 1.0))
+		if progress >= 1.0:
+			_moving = false
+			movement_finished.emit()
+			# Carry the unused part of this frame into a chained step.
+			if _moving:
+				_set_step_progress(minf(progress - 1.0, 1.0))
 	var frame: int = floori(_ambient_time * 12.0)
 	if frame != _ambient_frame:
 		_ambient_frame = frame
@@ -175,7 +191,8 @@ func _draw_party() -> void:
 func _draw_enemy(enemy: DungeonFloor.Enemy) -> void:
 	var origin: Vector2i = _enemy_from.get(enemy, enemy.cell)
 	var center: Vector2 = _project_step(origin, enemy.cell)
-	var opacity: float = 1.0 if _visible_cells.has(enemy.cell) else 1.0 - _step_progress
+	var was_visible: bool = _previous_visibility.has(origin)
+	var opacity: float = lerpf(float(was_visible), float(_visible_cells.has(enemy.cell)), _step_progress)
 	var accent: Color = ENEMY_MARK if enemy.hostile else PARTY_MARK
 	accent.a *= opacity
 	_draw_outline(center, Vector2(12, 6), accent)
@@ -186,7 +203,7 @@ func _draw_enemy(enemy: DungeonFloor.Enemy) -> void:
 
 func _stride(moved: bool, offset: int = 0) -> int:
 	if moved and _step_progress < 1.0:
-		return PrototypeArt.STRIDE_A + ((floori(_step_progress * 4.0) + offset + _floor.turn) % 2)
+		return PrototypeArt.STRIDE_A + ((floori(_step_progress * 2.0) + offset) % 2)
 	return PrototypeArt.IDLE
 
 
@@ -195,7 +212,7 @@ func _draw_depth(origin: Vector2i, destination: Vector2i) -> Vector2i:
 
 
 func _project_step(origin: Vector2i, destination: Vector2i) -> Vector2:
-	return _tiles.map_to_local(origin).lerp(_tiles.map_to_local(destination), _step_progress).round()
+	return _tiles.map_to_local(origin).lerp(_tiles.map_to_local(destination), _step_progress)
 
 
 func _draw_landmark(cell: Vector2i, center: Vector2, terrain: String) -> void:
@@ -335,5 +352,5 @@ func _draw_actor(feet: Vector2, index: int, sprite_size: float, pose: int = Prot
 	var anchor: float = 0.82 if index == PrototypeArt.RAT else 0.89
 	var bob: float = roundf(sin(_ambient_time * 4.0 + index * 0.9) * 0.6) if pose == PrototypeArt.IDLE else 0.0
 	var position_offset := Vector2(sprite_size * 0.5, sprite_size * anchor + bob)
-	var rect := Rect2((feet - position_offset).round(), Vector2.ONE * sprite_size)
+	var rect := Rect2(feet - position_offset, Vector2.ONE * sprite_size)
 	draw_texture_rect_region(PrototypeArt.ATLAS, rect, PrototypeArt.region(index, pose), Color(1, 1, 1, opacity), false, true)

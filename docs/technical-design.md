@@ -12,14 +12,14 @@
 ## Floor 1 vertical slice
 
 - `FloorOneGenerator` uses the run seed to place varied chambers on a 118×84 map, connect them with a route network, and add optional loops and encounters. Authored templates anchor the entry and boss chamber. The safe room has its own layout and movement state.
-- `CampaignRun` owns party progression, the inventory, explored sites, the collapse clock, and show events. `CampaignContent` loads heroes, enemies, items, skills, reward tables, and announcer lines from a Godot resource.
+- `CampaignRun` owns party progression, the inventory, explored sites, the collapse clock, and show events. `DungeonGame` advances the clock using elapsed real time during exploration and combat. Checkpoints store remaining seconds. Older turn-based checkpoints start with 30 minutes on load. `CampaignContent` loads heroes, enemies, items, skills, reward tables, and announcer lines from a Godot resource.
 - `CampaignSave` stores a versioned snapshot per slot under `user://`. Checkpoints record the layout version, seed, dungeon return tile, safe-room position, party, inventory, enemies, explored cells, and clock. Existing slots keep the original layout with a doorway to the new safe room. Collapse and party wipes restore the latest checkpoint, and a Floor 1 clear records the completed run.
 
 ## Milestone 3 systems in progress
 
-- The Floor 1 catalog defines rival factions, truce thresholds, recipes, material drops, audience gains, and sponsors. `CampaignRun` applies reputation to live dungeon enemies and records the viewer count, accepted contracts, and fulfilled contracts in checkpoints.
-- The refuge positions the workbench, Watch envoy, and sponsor board as physical interactions. The workbench checks all ingredients before spending them. Sponsor gifts are resolved once after a victory meets the contract terms.
-- `DungeonView` interpolates sprites and the camera between grid turns. `BattleView` locks commands during hit, guard, skill, and healing feedback. Scene fades cover the presentation swap at doors and encounter boundaries.
+- The Floor 1 catalog defines rival factions, truce thresholds, recipes, material drops, and guild contracts with victory thresholds. `CampaignRun` applies reputation to live dungeon enemies and records victories and contract status in checkpoints.
+- The refuge positions the workbench, Watch envoy, and contract board as physical interactions. The workbench checks all ingredients before spending them. Each active contract pays once when a victory meets its terms.
+- `DungeonView` advances the camera and actor positions on the same step clock. Holding a direction chains steps while carrying forward the unused fraction of the frame. Ground tiles update when their visibility changes. `BattleView` places combatants in opposing formations over the vault image and locks commands during feedback animations. Scene fades cover the presentation swap at doors and encounter boundaries. [Vault image](../assets/battle_vault.png)
 - `DungeonAudio` crossfades original exploration, refuge, and battle loops, plays matching cues, and stores separate music and effects levels under `user://`. The audio assets use Git LFS.
 
 ## Planned architecture

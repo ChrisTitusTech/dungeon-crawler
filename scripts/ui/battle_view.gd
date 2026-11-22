@@ -5,13 +5,17 @@ signal finished(outcome: BattleRules.Outcome)
 
 const FIGHTER_CARD := preload("res://scenes/battle_fighter.tscn")
 const PARTY_PORTRAITS: Array[int] = [PrototypeArt.ROOK, PrototypeArt.MIRA]
+const PARTY_SLOTS: Array[Vector2] = [Vector2(0.55, 0.78), Vector2(0.80, 0.81),
+	Vector2(0.675, 0.58), Vector2(0.925, 0.61)]
+const ENEMY_SLOT := Vector2(0.24, 0.75)
 const PARTY_ACCENT := Color("#8af3cc")
 const ENEMY_ACCENT := Color("#fa987e")
 const ACTION_CUES := [DungeonAudio.Cue.HIT, DungeonAudio.Cue.GUARD, DungeonAudio.Cue.HEAL,
 	DungeonAudio.Cue.RETREAT, DungeonAudio.Cue.SKILL]
 
 @onready var _timeline: Label = %Timeline
-@onready var _fighters: HBoxContainer = %Fighters
+@onready var _floor_clock: Label = %FloorClock
+@onready var _battlefield: Control = %Battlefield
 @onready var _log: Label = %BattleLog
 @onready var _commands: HBoxContainer = %Commands
 @onready var _attack: Button = %Attack
@@ -51,9 +55,12 @@ func start(battle: BattleRules, enemy_kind: DungeonFloor.EnemyKind, uses_checkpo
 	for index: int in rules.party.size():
 		var fighter: BattleRules.Fighter = rules.party[index]
 		var portrait: int = fighter.portrait if fighter.portrait >= 0 else PARTY_PORTRAITS[index % PARTY_PORTRAITS.size()]
-		var card: BattleFighterView = _add_card(portrait)
+		var card: BattleFighterView = _add_card(portrait, PARTY_SLOTS[index], 66.0, false)
+		if index >= 2:
+			_battlefield.move_child(card, 0)
 		_party_cards.append(card)
-	_enemy_card = _add_card(PrototypeArt.enemy_icon(enemy_kind), true)
+	var enemy_size := 130.0 if enemy_kind == DungeonFloor.EnemyKind.BOSS else 100.0
+	_enemy_card = _add_card(PrototypeArt.enemy_icon(enemy_kind), ENEMY_SLOT, enemy_size, true)
 	_render()
 
 
@@ -69,10 +76,19 @@ func hold_controls() -> void:
 	_continue.disabled = true
 
 
-func _add_card(portrait: int, opposing: bool = false) -> BattleFighterView:
+func show_floor_clock(remaining: String) -> void:
+	_floor_clock.text = "Time left %s" % remaining
+	_floor_clock.show()
+
+
+func _add_card(portrait: int, slot: Vector2, sprite_size: float, opposing: bool) -> BattleFighterView:
 	var card: BattleFighterView = FIGHTER_CARD.instantiate() as BattleFighterView
-	_fighters.add_child(card)
-	card.set_portrait(portrait, opposing)
+	_battlefield.add_child(card)
+	card.set_anchor_and_offset(SIDE_RIGHT, slot.x, 0.0)
+	card.set_anchor_and_offset(SIDE_BOTTOM, slot.y, 0.0)
+	card.set_anchor_and_offset(SIDE_LEFT, slot.x, 0.0)
+	card.set_anchor_and_offset(SIDE_TOP, slot.y, 0.0)
+	card.set_portrait(portrait, opposing, sprite_size)
 	return card
 
 

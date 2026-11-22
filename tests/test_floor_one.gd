@@ -98,7 +98,7 @@ func test_checkpoint_overwrite_and_slot_isolation() -> void:
 	run.floor.encounter = foe
 	run.floor.resolve_encounter(true)
 	run.party[0].injuries["torso"] = true
-	run.turns_left -= 17
+	run.seconds_left -= 17.5
 	assert_eq(CampaignSave.write(_directory, 1, run.snapshot()), OK)
 	assert_eq(CampaignSave.write(_directory, 2, CampaignRun.new(84).snapshot()), OK)
 
@@ -107,7 +107,7 @@ func test_checkpoint_overwrite_and_slot_isolation() -> void:
 	if loaded == null:
 		return
 	assert_eq(loaded.seed, 83)
-	assert_eq(loaded.turns_left, CampaignRun.TURN_BUDGET - 17)
+	assert_eq(loaded.seconds_left, 1782.5)
 	assert_true(loaded.at_camp())
 	assert_true(loaded.party[0].injuries.has("torso"))
 	assert_eq(loaded.count("bronze_box"), 1)
@@ -118,6 +118,8 @@ func test_checkpoint_overwrite_and_slot_isolation() -> void:
 	for field: String in ["layout_version", "in_refuge", "refuge_player"]:
 		older.erase(field)
 	older.erase("announcement_event")
+	older.erase("seconds_left")
+	older["turns_left"] = 500
 	older["announcement"] = "Archived boss victory line."
 	older["boss_defeated"] = true
 	var renamed: CampaignRun = CampaignRun.restore(older)
@@ -127,6 +129,7 @@ func test_checkpoint_overwrite_and_slot_isolation() -> void:
 		assert_true(renamed.at_camp())
 		assert_eq(renamed.floor.size, Vector2i(77, 47))
 		assert_eq(renamed.floor.player, renamed.refuge_door)
+		assert_eq(renamed.seconds_left, 1800.0)
 	var invalid: Dictionary = loaded.snapshot()
 	invalid["inventory"] = {"unknown": 1}
 	assert_null(CampaignRun.restore(invalid))
@@ -143,20 +146,53 @@ func test_collapse_reloads_the_actual_camp_checkpoint() -> void:
 	slot.pressed.emit()
 	assert_false(menu.visible, "A new run starts at the dungeon-side door.")
 	assert_false(CampaignSave.read(_directory, 1).is_empty())
-	game._run.turns_left = 1
+	assert_eq(game._turn.text, "Time left 30:00")
 	game._take_turn(Vector2i.ZERO)
+	assert_eq(game._run.seconds_left, 1800.0, "Waiting a turn does not spend time by itself.")
+	game._update_floor_clock(1500.5)
+	assert_eq(game._turn.text, "Time left 05:00")
+	assert_string_contains(game._announcer.text, "Five minutes")
+	game._show_pause()
+	game._update_floor_clock(100.0)
+	assert_eq(game._run.seconds_left, 299.5)
+	game._hide_menu()
+	game._update_floor_clock(299.5)
 	assert_eq(heading.text, "The floor collapsed")
 	var reload_button: Button = choices.get_child(0)
 	reload_button.pressed.emit()
 	assert_true(game._run.at_camp())
-	assert_eq(game._run.turns_left, CampaignRun.TURN_BUDGET)
+	assert_eq(game._run.seconds_left, 1800.0)
 	assert_false(menu.visible)
+	game._update_floor_clock(60.0)
+	assert_eq(game._run.seconds_left, 1800.0, "The safe room pauses the countdown.")
 	game._interact()
 	assert_false(game._run.at_camp())
-	game._take_turn(Vector2i.ZERO)
+	game._update_floor_clock(1.5)
 	game._interact()
 	assert_true(game._run.at_camp())
-	assert_eq(CampaignSave.read(_directory, 1).turns_left, CampaignRun.TURN_BUDGET - 1)
+	assert_eq(CampaignSave.read(_directory, 1).seconds_left, 1798.5)
+	await wait_process_frames(1)
+
+
+func test_floor_can_collapse_during_battle() -> void:
+	var game: DungeonGame = GAME.instantiate() as DungeonGame
+	game.save_directory = _directory
+	add_child_autofree(game)
+	game._new_slot(1)
+	game._floor.encounter = game._floor.enemies[0]
+	game._open_battle(game._floor.encounter.kind)
+	game._update_floor_clock(1770.0)
+	var clock: Label = game._battle.get_node("%FloorClock")
+	assert_eq(clock.text, "Time left 00:30")
+	game._update_floor_clock(30.0)
+	assert_null(game._battle)
+	var heading: Label = game._menu.get_node("%Heading")
+	assert_eq(heading.text, "The floor collapsed")
+	var choices: VBoxContainer = game._menu.get_node("%Choices")
+	var reload_button: Button = choices.get_child(0)
+	reload_button.pressed.emit()
+	assert_true(game._run.at_camp())
+	assert_null(game._run.floor.encounter)
 	await wait_process_frames(1)
 
 
@@ -197,7 +233,7 @@ func test_refuge_door_round_trip_and_furnishings() -> void:
 	assert_eq(dungeon.explored, explored)
 	assert_eq(enemy.cell, enemy_cell)
 	assert_eq(dungeon.turn, 0)
-	assert_eq(game._run.turns_left, CampaignRun.TURN_BUDGET)
+	assert_eq(game._run.seconds_left, 1800.0)
 	await wait_process_frames(1)
 
 
@@ -326,22 +362,24 @@ func test_refuge_workbench_and_envoy_can_be_used_from_the_map() -> void:
 
 	_walk_straight(game, Vector2i(9, 4))
 	_walk_straight(game, Vector2i(9, 2))
-	game._run.viewers = 35
+	game._run.victories = 2
 	game._interact()
-	assert_eq(heading.text, "Sponsor board")
+	assert_eq(heading.text, "Guild contracts")
 	var contract: Button = choices.get_child(0)
 	assert_false(contract.disabled)
+	var locked_contract: Button = choices.get_child(1)
+	assert_true(locked_contract.disabled)
 	contract.pressed.emit()
 	assert_eq(CampaignSave.read(_directory, 1).sponsor_contracts["lanternwrights"], "active")
 	await wait_process_frames(1)
 
 
-func test_sponsor_gifts_require_their_contract_conditions() -> void:
+func test_guild_contract_rewards_require_their_conditions() -> void:
 	var run := CampaignRun.new(83)
 	var rat: DungeonFloor.Enemy = run.floor.enemy_at(_find(run.floor, "r"))
 	assert_eq(rat.kind, DungeonFloor.EnemyKind.RAT)
 	assert_false(run.can_accept_sponsor("lanternwrights"))
-	run.viewers = 75
+	run.victories = 5
 	assert_false(run.accept_sponsor("lanternwrights"))
 	assert_true(run.enter_refuge())
 	assert_true(run.accept_sponsor("lanternwrights"))
@@ -349,15 +387,15 @@ func test_sponsor_gifts_require_their_contract_conditions() -> void:
 	run.leave_refuge()
 
 	run.settle_battle(rat, BattleRules.Outcome.FLED, 4, true)
-	assert_eq(run.viewers, 75)
+	assert_eq(run.victories, 5)
 	assert_eq(run.sponsor_contracts["hammer_crown"], "active")
 	run.settle_battle(rat, BattleRules.Outcome.WON, 3, false)
-	assert_eq(run.viewers, 89)
+	assert_eq(run.victories, 6)
 	assert_eq(run.sponsor_contracts["lanternwrights"], "active")
 	assert_eq(run.sponsor_contracts["hammer_crown"], "active")
 	var tonics: int = run.count("tonic")
 	run.settle_battle(rat, BattleRules.Outcome.WON, tonics, true)
-	assert_eq(run.viewers, 108)
+	assert_eq(run.victories, 7)
 	assert_eq(run.sponsor_contracts["lanternwrights"], "fulfilled")
 	assert_eq(run.sponsor_contracts["hammer_crown"], "fulfilled")
 	assert_eq(run.count("tonic"), tonics + 4)
@@ -368,7 +406,7 @@ func test_sponsor_gifts_require_their_contract_conditions() -> void:
 	var restored: CampaignRun = CampaignRun.restore(run.snapshot())
 	assert_not_null(restored)
 	if restored != null:
-		assert_eq(restored.viewers, run.viewers)
+		assert_eq(restored.victories, run.victories)
 		assert_eq(restored.sponsor_contracts, run.sponsor_contracts)
 
 

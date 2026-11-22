@@ -11,18 +11,18 @@ One hand-built isometric dungeon with turn-stepped movement, field of view, a mi
 **Complete.** A rendered playthrough cleared all four encounters and verified keyboard, gamepad, and mouse movement. All 11 GUT tests passed, and local Windows and Linux release exports succeeded.
 
 ## Milestone 2: Vertical slice (floor 1)
-**Complete.** Floor 1 has a 118×84 seeded layout with variable room placement, corridor loops, and encounter counts. A door leads to a separate walkable safe room with beds, a dining table, and a save chest. The floor has a 720-turn collapse clock, one recruit, levelling and stat allocation, gear, persistent injuries, versioned checkpoints, and achievements with loot boxes and announcer lines.
+**Complete.** Floor 1 has a 118×84 seeded layout with variable room placement, corridor loops, and encounter counts. A door leads to a separate walkable safe room with beds, a dining table, and a save chest. The floor has a 30-minute collapse countdown, one recruit, levelling and stat allocation, gear, persistent injuries, versioned checkpoints, and achievements with loot boxes and announcer lines.
 
-A rendered playthrough used the safe-room doors, beds, dining table, and chest, then defeated the Floor 1 boss and reopened the cleared save. All 19 tests passed, and Windows and Linux release exports succeeded. The 30 to 60 minute target remains a benchmark for balance playtests.
+A rendered playthrough used the safe-room doors, beds, dining table, and chest, then defeated the Floor 1 boss and reopened the cleared save. The 30 to 60 minute session target includes time spent in the refuge and menus.
 
 ## Milestone 3: Systems and demo (floors 1 to 3)
-**In progress.** Floor 1 has the first faction and reputation pass, a refuge workbench, viewer counts, and two sponsor contracts. The first art and audio pass adds animated sprites, combat effects, scene fades, original music and sound effects, and audio volume settings. Race and class selection, pets, full gamepad support, art and audio for the remaining floors, broader settings and accessibility options, Floors 2 and 3, and the public demo remain open.
+**In progress.** Floor 1 has the first faction and reputation pass, a refuge workbench, and two guild contracts. The first art and audio pass adds continuous held movement, a side-view battle formation against a torchlit vault, combat effects, scene fades, original music and sound effects, and audio settings. Race and class selection, pets, full gamepad support, broader accessibility options, Floors 2 and 3 with their own art and audio, and the public demo remain open. [PC handoff](handoff.md)
 
 ## Milestone 4: Early Access (floors 1 to 6)
 **Planned.** Two full tiers of content, balance pass, save migration, tutorialisation, Steam integration (achievements, cloud saves), Steam Deck check, and launch.
 
 ## Milestone 5: Early Access updates (floors 7 to 15)
-**Planned.** One tier per major update, each with new enemies, factions, sponsors, and a system twist, guided by player feedback.
+**Planned.** One tier per major update, each with new enemies, factions, guild contracts, and a system twist, guided by player feedback.
 
 ## Milestone 6: 1.0 (floors 16 to 18)
 **Planned.** Final tier, ending, full balance and polish pass, localisation readiness, and release.
@@ -45,14 +45,15 @@ Work items in order through the demo.
 12. [x] `injury-system` adds persistent body-part wounds, combat penalties, bandages, and camp treatment.
 13. [x] `floor-generation` builds connected seeded layouts around authored safe and boss rooms.
 14. [x] `safe-room-save` adds three versioned slots, manual and entry saves, and checkpoint reload after a wipe.
-15. [x] `collapse-timer` tracks turns outside camp and reloads the checkpoint after collapse.
+15. [x] `collapse-timer` counts down 30 minutes of exploration and combat and offers to reload the checkpoint after collapse.
 16. [x] `show-layer` connects run events to achievements, loot boxes, and written announcer lines.
 17. [x] `vertical-slice` delivers a playable Floor 1 with a verified boss clear and completed save reload.
 18. [ ] `factions` has rival reputation, a Watch envoy, a truce, and neutral patrols. Territory, faction skirmishes, and faction quests remain open.
 19. [x] `crafting` adds the refuge workbench with three recipes that use materials from enemies and supply caches.
-20. [x] `viewers-sponsors` adds a visible audience count and two sponsor contracts with one-time gifts.
-21. [ ] `race-class` for race and class selection and pets.
-22. [ ] `demo-release` for Floors 2 and 3, the art and audio pass, the demo, and the Steam page.
+20. [x] `guild-contracts` adds two refuge board contracts that unlock at two and five victories and pay one-time rewards.
+21. [x] `floor-one-polish` smooths held movement and adds a dungeon backdrop and opposing battle formations.
+22. [ ] `race-class` for race and class selection and pets.
+23. [ ] `demo-release` for Floors 2 and 3, their art and audio, the demo, and the Steam page.
 
 ## Risks and open questions
 

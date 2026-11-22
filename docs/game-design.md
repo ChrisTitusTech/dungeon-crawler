@@ -4,7 +4,7 @@ Working title: TBD. All names, characters, and setting are original IP; Dungeon 
 
 ## Overview
 
-Build a commercial single-player 2D party RPG in Godot (GDScript) for Windows and Linux. The player is a contestant in a lethal, televised 18-floor dungeon run by a snarky System AI. The isometric exploration view shows enemies on the grid, and touching one opens a separate JRPG-style menu battle. A light Dwarf Fortress-style simulation (factions, crafting, body-part injuries) runs underneath.
+Build a commercial single-player 2D party RPG in Godot (GDScript) for Windows and Linux. The party must survive an 18-floor dungeon run by a snarky System AI. The isometric exploration view shows enemies on the grid, and touching one opens a separate JRPG-style menu battle. A light Dwarf Fortress-style simulation (factions, crafting, body-part injuries) runs underneath.
 
 Approach: prove the core loop in a one-floor vertical slice, widen to a three-floor demo, ship to Steam Early Access, then add floors and systems until all 18 floors are done for 1.0.
 
@@ -12,7 +12,7 @@ Approach: prove the core loop in a one-floor vertical slice, widen to a three-fl
 
 Milestones 0 and 1 are complete. Rook and Mira can explore a hand-built dungeon with fog of war and a minimap, then fight four encounters using Attack, Defend, Item, and Flee. HP and tonics carry between fights. A party wipe restarts the test map.
 
-Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dungeon door to a separate safe room, and use the stairs after defeating Sir Aldren, the Hollow Castellan. Beds heal and treat wounds, meals restore some HP, and the chest saves progress and opens loot boxes. New runs have 720 turns on the dungeon floor. The 30 to 60 minute pacing target guides future balance passes. [Roadmap](roadmap.md)
+Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dungeon door to a separate safe room, and use the stairs after defeating Sir Aldren, the Hollow Castellan. Beds heal and treat wounds, meals restore some HP, and the chest saves progress and opens loot boxes. A new floor starts with a 30-minute collapse countdown. The broader pacing target includes time spent in safe rooms and menus. [Roadmap](roadmap.md)
 
 ## Key decisions
 
@@ -26,7 +26,7 @@ Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dunge
 | Dungeons | Hybrid: hand-crafted safe rooms, bosses, and story beats; procedural everything else |
 | Structure | 18 floors, persistent campaign |
 | Death | Party-member death is permanent; a full wipe reloads the last safe room |
-| Show framing | System AI announcer, floor collapse timers, loot boxes, achievements, viewers and sponsors, safe rooms |
+| Dungeon systems | System AI announcer, floor collapse timers, loot boxes, achievements, guild contracts, safe rooms |
 | Simulation | Factions, crafting, injuries. No digging or destructible terrain |
 | Art | 32×16 stone tiles and shaded 48-pixel character sprites |
 | UI | Minimap; keyboard and mouse plus gamepad |
@@ -38,14 +38,14 @@ Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dunge
 
 1. Enter a floor from a safe room.
 2. Explore, fight, loot, and deal with factions while the floor's collapse timer runs.
-3. Earn achievements, which award loot boxes; build viewer count, which attracts sponsors.
+3. Earn loot boxes through achievements and unlock guild contracts through victories.
 4. Return to safe rooms to save, heal, open boxes, craft, and manage the party.
 5. Beat the floor boss or find the stairs before the floor collapses.
 6. Descend; repeat with new systems unlocking on set floors.
 
 ## Exploration
 
-- Tile-based movement on a grid. The world is turn-stepped: enemies and the collapse timer advance when the party acts, so the player can always stop and think.
+- Tile-based movement on a grid. Enemies on the map advance when the party acts. The collapse countdown runs in real time during exploration and combat.
 - Field of view and fog of war; explored tiles stay on the minimap.
 - Visible enemies patrol, chase, flee, or fight each other according to faction relations.
 - Interactables: doors, chests, traps, crafting stations, NPCs, stairs.
@@ -54,11 +54,11 @@ Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dunge
 
 ## Battle
 
-- Separate battle scene with the party on one side and up to roughly six enemies on the other.
+- Side-view battles place party sprites on the right and opponents on the left, with a dungeon backdrop and individual health readouts. Floor 1 encounters have one enemy. Later encounters can use groups of up to roughly six enemies.
 - Turn order by a speed stat, shown as a visible timeline.
 - Commands: Attack, Skill, Item, Defend, Swap/Flee. Attacks and skills can target a body part.
 - Resources: HP, a skill resource (mana or stamina by class), and status effects.
-- Outcomes: victory (XP, drops, viewer gain), flee (return to the map with the enemy still there), or wipe (reload the last safe room).
+- Outcomes: victory (XP and drops), flee (return to the map with the enemy still there), or wipe (reload the last safe room).
 
 ## Party and progression
 
@@ -78,14 +78,14 @@ Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dunge
 
 - **System AI:** announcer text for achievements, deaths, floor events, and taunts. It is written content triggered by game events, not generated at runtime.
 - **Achievements and loot boxes:** achievements grant boxes in tiers (bronze through to legendary); boxes open only in safe rooms.
-- **Viewers and sponsors:** viewer count rises with risky, stylish, or funny play. Thresholds unlock sponsors, who send targeted gifts with strings attached.
-- **Collapse timer:** each floor has a turn budget. Warnings escalate, and anything still on the floor at zero dies.
+- **Guild contracts.** Victories unlock offers at the refuge contract board. Each accepted contract pays a one-time reward when the party wins a battle under its terms.
+- **Collapse timer.** Each floor starts with 30 minutes. The timer pauses in the safe room and campaign menus. Warnings trigger at five minutes, two minutes, and 30 seconds. At zero, the party can reload its last checkpoint with the saved time remaining.
 - **Safe rooms:** hand-crafted hubs with save point, bed, shop, crafting stations, box opening, and roster management.
 
 ## Factions
 
 - On Floor 1, the Ashfang Brood and Barrow Watch are rivals. Hunting Ashfang beasts improves Watch standing, and the Watch envoy accepts bandages. Sentinels yield the way and patrol peacefully once a truce is earned. Sir Aldren guards the stairs independently of the truce.
-- Each floor hosts two to four factions (monster tribes, contestant groups, show staff) with a relation matrix toward each other and the party.
+- Each floor hosts two to four factions (monster tribes, adventuring companies, dungeon wardens) with a relation matrix toward each other and the party.
 - Reputation changes through kills, quests, gifts, and betrayals. It controls hostility, shop access, recruits, and some quest lines.
 - Factions act on the map: they hold territory, patrol, and fight rivals, so the floor changes while the player explores.
 

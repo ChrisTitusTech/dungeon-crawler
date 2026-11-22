@@ -5,11 +5,12 @@ signal event_occurred(event: String)
 
 const CONTENT: CampaignContent = preload("res://data/floor_one_content.tres")
 const REFUGE_LAYOUT: DungeonLayout = preload("res://data/safe_room.tres")
-const TURN_BUDGET := 720
+const FLOOR_TIME_SECONDS := 30 * 60
+const LEGACY_TURN_BUDGET := 720
 const PARTY_LIMIT := 4
 const BOSS_ID := "warden"
 const ENEMY_IDS := ["rat", "guard", BOSS_ID]
-const WARNINGS := {100: "warning", 40: "urgent", 10: "critical"}
+const WARNINGS := {30: "critical", 120: "urgent", 300: "warning"}
 
 var seed: int
 var floor: DungeonFloor
@@ -18,7 +19,6 @@ var refuge_door: Vector2i
 var party: Array[BattleRules.Fighter] = []
 var inventory: Dictionary[String, int] = {}
 var reputation: Dictionary[String, int] = {}
-var viewers: int = 0
 var sponsor_contracts: Dictionary[String, String] = {}
 var used_sites: Dictionary[Vector2i, bool] = {}
 var fallen_gear: Dictionary[Vector2i, Array] = {}
@@ -26,7 +26,7 @@ var achievements := PackedStringArray()
 var announcement: String:
 	get:
 		return CONTENT.show[_announcement_event].line
-var turns_left: int = TURN_BUDGET
+var seconds_left: float = FLOOR_TIME_SECONDS
 var victories: int = 0
 var boss_defeated: bool = false
 var completed: bool = false
@@ -75,12 +75,21 @@ func boss_name() -> String:
 	return CONTENT.foes[BOSS_ID].name
 
 
-func pass_turn() -> void:
-	if at_camp():
+func elapse_floor_time(seconds: float) -> void:
+	if at_camp() or completed or seconds_left <= 0.0:
 		return
-	turns_left -= 1
-	if WARNINGS.has(turns_left):
-		event_occurred.emit(WARNINGS[turns_left])
+	var previous: float = seconds_left
+	seconds_left = maxf(0.0, previous - seconds)
+	for threshold: int in WARNINGS:
+		if previous > threshold and seconds_left <= threshold:
+			event_occurred.emit(WARNINGS[threshold])
+			break
+
+
+func floor_time_text() -> String:
+	var display_seconds: int = ceili(seconds_left)
+	@warning_ignore("integer_division")
+	return "%02d:%02d" % [display_seconds / 60, display_seconds % 60]
 
 
 func count(item: String) -> int:
@@ -137,7 +146,7 @@ func craft(recipe_id: String) -> bool:
 
 func can_accept_sponsor(sponsor: String) -> bool:
 	var definition: Dictionary = CONTENT.sponsors.get(sponsor, {})
-	return at_camp() and not definition.is_empty() and viewers >= definition.viewers and not sponsor_contracts.has(sponsor)
+	return at_camp() and not definition.is_empty() and victories >= definition.victories and not sponsor_contracts.has(sponsor)
 
 
 func accept_sponsor(sponsor: String) -> bool:
@@ -252,9 +261,6 @@ func settle_battle(enemy: DungeonFloor.Enemy, outcome: BattleRules.Outcome, poti
 		return
 
 	var reward: Dictionary = CONTENT.foes[ENEMY_IDS[enemy.kind]]
-	viewers += int(reward.viewers) + (5 if used_skill else 0)
-	if party.any(func(member: BattleRules.Fighter) -> bool: return member.hp > 0 and member.hp * 4 <= member.max_hp):
-		viewers += 6
 	for member: BattleRules.Fighter in party:
 		member.earn_experience(reward.xp)
 	add_item(reward.drop)
@@ -295,12 +301,12 @@ func snapshot() -> Dictionary:
 			"weapon": member.weapon, "armor": member.armor, "injuries": member.injuries.duplicate(),
 		})
 	return {
-		"seed": seed, "player": floor.player, "turn": floor.turn, "turns_left": turns_left,
+		"seed": seed, "player": floor.player, "turn": floor.turn, "seconds_left": seconds_left,
 		"layout_version": _layout_version, "in_refuge": _in_refuge, "refuge_player": refuge.player,
 		"enemies": enemies, "explored": floor.explored.keys(), "party": members,
 		"inventory": inventory.duplicate(), "used_sites": used_sites.duplicate(),
 		"reputation": reputation.duplicate(),
-		"viewers": viewers, "sponsor_contracts": sponsor_contracts.duplicate(),
+		"sponsor_contracts": sponsor_contracts.duplicate(),
 		"fallen_gear": fallen_gear.duplicate(true), "achievements": achievements.duplicate(),
 		"announcement": announcement, "announcement_event": _announcement_event, "victories": victories,
 		"boss_defeated": boss_defeated, "completed": completed,
@@ -309,7 +315,7 @@ func snapshot() -> Dictionary:
 
 static func restore(data: Dictionary) -> CampaignRun:
 	var fields := {
-		"seed": TYPE_INT, "player": TYPE_VECTOR2I, "turn": TYPE_INT, "turns_left": TYPE_INT,
+		"seed": TYPE_INT, "player": TYPE_VECTOR2I, "turn": TYPE_INT,
 		"enemies": TYPE_DICTIONARY, "explored": TYPE_ARRAY, "party": TYPE_ARRAY,
 		"inventory": TYPE_DICTIONARY, "used_sites": TYPE_DICTIONARY, "fallen_gear": TYPE_DICTIONARY,
 		"achievements": TYPE_PACKED_STRING_ARRAY, "announcement": TYPE_STRING,
@@ -317,16 +323,23 @@ static func restore(data: Dictionary) -> CampaignRun:
 	}
 	if not _matches(data, fields) or data.party.is_empty() or data.party.size() > PARTY_LIMIT:
 		return null
+	var saved_time: Variant = data.get("seconds_left")
+	if not data.has("seconds_left"):
+		var legacy_turns: Variant = data.get("turns_left")
+		if not legacy_turns is int or legacy_turns <= 0 or legacy_turns > LEGACY_TURN_BUDGET:
+			return null
+		# Old checkpoints had no elapsed time to restore.
+		saved_time = FLOOR_TIME_SECONDS
+	if not (saved_time is float or saved_time is int) or not is_finite(saved_time) or saved_time <= 0 or saved_time > FLOOR_TIME_SECONDS:
+		return null
 
 	var layout_version: Variant = data.get("layout_version", 1)
 	if not layout_version is int or layout_version not in [1, FloorOneGenerator.VERSION]:
 		return null
 	var run := CampaignRun.new(data.seed, layout_version)
-	var saved_viewers: Variant = data.get("viewers", 0)
 	var saved_contracts: Variant = data.get("sponsor_contracts", {})
-	if not saved_viewers is int or saved_viewers < 0 or not saved_contracts is Dictionary:
+	if not saved_contracts is Dictionary:
 		return null
-	run.viewers = saved_viewers
 	for sponsor: Variant in saved_contracts:
 		if not CONTENT.sponsors.has(sponsor) or saved_contracts[sponsor] not in ["active", "fulfilled"]:
 			return null
@@ -358,7 +371,7 @@ static func restore(data: Dictionary) -> CampaignRun:
 	for item: Variant in data.inventory:
 		if not CONTENT.items.has(item) or not data.inventory[item] is int or data.inventory[item] <= 0:
 			return null
-	if data.turn < 0 or data.turns_left <= 0 or data.turns_left > TURN_BUDGET:
+	if data.turn < 0:
 		return null
 	run.floor.restore_checkpoint(dungeon_cell, data.turn, data.enemies, data.explored)
 	run.refuge.restore_checkpoint(camp_cell, 0, {}, [])
@@ -393,7 +406,9 @@ static func restore(data: Dictionary) -> CampaignRun:
 	run.fallen_gear.assign(data.fallen_gear)
 	run.achievements = data.achievements.duplicate()
 	run._announcement_event = _saved_announcement_event(data)
-	run.turns_left = data.turns_left
+	if not data.has("seconds_left") and WARNINGS.values().has(run._announcement_event):
+		run._announcement_event = "warden" if data.boss_defeated else "intro"
+	run.seconds_left = saved_time
 	run.victories = data.victories
 	run.boss_defeated = data.boss_defeated
 	run.completed = data.completed

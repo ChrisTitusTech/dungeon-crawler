@@ -12,8 +12,6 @@ const MOVEMENT: Dictionary[StringName, Vector2i] = {
 }
 const MOVE_HINT := "WASD, arrows, or click adjacent"
 const NO_SITE := Vector2i(-1, -1)
-const HOLD_DELAY := 0.22
-const REPEAT_DELAY := 0.13
 
 @export var prototype_mode: bool = false
 @export var save_directory: String = "user://"
@@ -52,6 +50,7 @@ var _queued_move: Vector2i = NO_SITE
 var _queued_use: bool
 var _held_action: StringName
 var _repeat: float
+var _last_clock_usec: int = Time.get_ticks_usec()
 
 
 func _ready() -> void:
@@ -76,6 +75,9 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var now: int = Time.get_ticks_usec()
+	_update_floor_clock((now - _last_clock_usec) / 1_000_000.0)
+	_last_clock_usec = now
 	if not _can_explore():
 		_held_action = &""
 		return
@@ -99,22 +101,44 @@ func _process(delta: float) -> void:
 	for action: StringName in MOVEMENT:
 		if Input.is_action_just_pressed(action):
 			_held_action = action
-			_repeat = HOLD_DELAY
+			_repeat = DungeonView.STEP_TIME
 			_take_turn(MOVEMENT[action])
 			return
 		if pressed == &"" and Input.is_action_pressed(action):
 			pressed = action
+	if _held_action != &"" and Input.is_action_pressed(_held_action):
+		pressed = _held_action
 	if Input.is_action_just_pressed(&"wait_turn"):
 		_take_turn(Vector2i.ZERO)
 		return
 	if pressed != _held_action:
 		_held_action = pressed
-		_repeat = HOLD_DELAY
-	elif pressed != &"":
+		_repeat = 0.0
+	if pressed != &"" and not _dungeon.is_moving():
 		_repeat -= delta
-		if _repeat <= 0.0 and not _dungeon.is_moving():
-			_repeat = REPEAT_DELAY
+		if _repeat <= 0.0:
+			_repeat = DungeonView.STEP_TIME
 			_take_turn(MOVEMENT[pressed])
+
+
+func _update_floor_clock(elapsed: float) -> void:
+	if _run == null or _run.at_camp() or _run.completed or _menu.visible or _fade.busy:
+		return
+	var previous_announcement: String = _run.announcement
+	_run.elapse_floor_time(elapsed)
+	var remaining: String = _run.floor_time_text()
+	_turn.text = "Time left %s" % remaining
+	if _battle != null:
+		_battle.show_floor_clock(remaining)
+	if previous_announcement != _run.announcement:
+		_announcer.text = "System · %s" % _run.announcement
+	if _run.seconds_left <= 0.0:
+		if _battle != null:
+			_battle.hold_controls()
+			_dismiss_battle()
+			_audio.play_track(DungeonAudio.Track.DUNGEON)
+		_audio.play_cue(DungeonAudio.Cue.DEFEAT)
+		_prompt_reload("The floor collapsed", "The last safe-room checkpoint is intact.")
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -157,12 +181,6 @@ func _take_turn(direction: Vector2i) -> void:
 	if not _floor.take_turn(direction):
 		return
 
-	if _run != null:
-		_run.pass_turn()
-		if _run.turns_left <= 0:
-			_audio.play_cue(DungeonAudio.Cue.DEFEAT)
-			_prompt_reload("The floor collapsed", "The last safe-room checkpoint is intact.")
-			return
 	if _floor.player != previous:
 		_audio.play_cue(DungeonAudio.Cue.STEP)
 	var moving: bool = _dungeon.refresh(true)
@@ -172,7 +190,7 @@ func _take_turn(direction: Vector2i) -> void:
 
 
 func _on_movement_finished() -> void:
-	if _floor == null:
+	if _floor == null or (_run != null and _run.seconds_left <= 0.0):
 		return
 	var direction: Vector2i = _queued_move
 	var use_landmark: bool = _queued_use
@@ -184,6 +202,9 @@ func _on_movement_finished() -> void:
 		_interact()
 	elif direction != NO_SITE:
 		_take_turn(direction)
+	elif _held_action != &"" and Input.is_action_pressed(_held_action):
+		_repeat = DungeonView.STEP_TIME
+		_take_turn(MOVEMENT[_held_action])
 
 
 func _open_battle(enemy_kind: DungeonFloor.EnemyKind) -> void:
@@ -211,6 +232,8 @@ func _begin_battle(enemy_kind: DungeonFloor.EnemyKind) -> void:
 	var supplies: int = _run.count("tonic") if _run != null else _tonics
 	_audio.play_track(DungeonAudio.Track.BATTLE)
 	_battle.start(BattleRules.new(_party, opponent, supplies), enemy_kind, _run != null, _audio, _fade.busy)
+	if _run != null:
+		_battle.show_floor_clock(_run.floor_time_text())
 
 
 func _close_battle(outcome: BattleRules.Outcome) -> void:
@@ -221,11 +244,7 @@ func _close_battle(outcome: BattleRules.Outcome) -> void:
 func _resolve_battle(outcome: BattleRules.Outcome) -> void:
 	_tonics = _battle.rules.potions
 	var used_skill: bool = _battle.rules.used_skill
-	_battle.hide()
-	_battle.queue_free()
-	_battle = null
-	_dungeon.show()
-	_hud.show()
+	_dismiss_battle()
 
 	if outcome == BattleRules.Outcome.LOST:
 		if _run == null:
@@ -243,6 +262,14 @@ func _resolve_battle(outcome: BattleRules.Outcome) -> void:
 	_refresh_exploration(notice)
 
 
+func _dismiss_battle() -> void:
+	_battle.hide()
+	_battle.queue_free()
+	_battle = null
+	_dungeon.show()
+	_hud.show()
+
+
 func _resume_scene_controls() -> void:
 	if _battle != null:
 		_battle.release_controls()
@@ -258,9 +285,9 @@ func _refresh_exploration(notice: String) -> void:
 	_status.text = "Dungeon clear." if _floor.enemies.is_empty() else notice
 	if _run != null:
 		_title.text = "Safe room" if _run.at_camp() else "Floor 1"
-		_turn.text = "%d turns left" % _run.turns_left
-		_remaining.text = "Clock paused" if _run.at_camp() else "%d viewers" % _run.viewers
-		_announcer.text = "Recover at the beds or table. The workbench, envoy, and sponsor board are inside." if _run.at_camp() else "System · %s" % _run.announcement
+		_turn.text = "Time left %s" % _run.floor_time_text()
+		_remaining.text = "Clock paused" if _run.at_camp() else "%d wins" % _run.victories
+		_announcer.text = "Recover at the beds or table. The workbench, envoy, and contract board are inside." if _run.at_camp() else "System · %s" % _run.announcement
 		_landmark_hint.text = _exploration_hint() if notice == MOVE_HINT else notice
 		_interact_button.disabled = _interaction_cell() == NO_SITE
 	_minimap.refresh(_floor)
@@ -442,12 +469,12 @@ func _exploration_hint() -> String:
 		"L": return "Use to save and open the pack"
 		"G": return "Use to speak with the Watch envoy"
 		"W": return "Use the workbench to craft supplies"
-		"A": return "Use the board to review sponsor contracts"
+		"A": return "Use the board to review guild contracts"
 		"c": return "Use to take supplies"
 		"R": return "Use to talk to Sable"
 		">": return "Use to descend" if _run.boss_defeated else "%s holds the stairs" % _run.boss_name()
 	if _run.at_camp():
-		return "Beds · table · chest · workbench · envoy · sponsor board"
+		return "Beds · table · chest · workbench · envoy · contract board"
 	var enemy: DungeonFloor.Enemy = _floor.enemy_at(site)
 	if enemy != null and not enemy.hostile:
 		return "Use to speak with the sentinel"
@@ -564,17 +591,17 @@ func _offer_watch_gift() -> void:
 
 
 func _show_sponsors(message: String = "") -> void:
-	var lines := PackedStringArray(["Viewers · %d" % _run.viewers])
+	var lines := PackedStringArray(["Victories · %d" % _run.victories])
 	if not message.is_empty():
 		lines.append(message)
 	var choices: Array[Dictionary] = []
 	for sponsor: String in CampaignRun.CONTENT.sponsors:
 		var definition: Dictionary = CampaignRun.CONTENT.sponsors[sponsor]
-		var status: String = _run.sponsor_contracts.get(sponsor, "Available" if _run.viewers >= definition.viewers else "%d viewers required" % definition.viewers)
+		var status: String = _run.sponsor_contracts.get(sponsor, "Available" if _run.victories >= definition.victories else "%d victories required" % definition.victories)
 		lines.append("%s · %s\n%s" % [definition.name, status.capitalize(), definition.terms])
 		choices.append(CampaignMenu.choice("Accept %s" % definition.name, _accept_sponsor.bind(sponsor), not _run.can_accept_sponsor(sponsor)))
 	choices.append(CampaignMenu.choice("Back", _hide_menu))
-	_present("Sponsor board", "\n\n".join(lines), choices)
+	_present("Guild contracts", "\n\n".join(lines), choices)
 
 
 func _accept_sponsor(sponsor: String) -> void:
@@ -629,7 +656,6 @@ func _show_party() -> void:
 		if not member.injuries.is_empty() and member.hp > 0:
 			lines.append("Injuries · %s" % ", ".join(member.injuries.keys()))
 	lines.append("Achievements · %s" % (", ".join(_run.achievements) if not _run.achievements.is_empty() else "None yet"))
-	lines.append("Viewers · %d" % _run.viewers)
 	for faction: String in _run.reputation:
 		var standing: String = "Truce" if _run.has_truce(faction) else "Hostile"
 		lines.append("%s · %d · %s" % [CampaignRun.CONTENT.factions[faction].name, _run.reputation[faction], standing])
@@ -674,8 +700,8 @@ func _change_volume(music: bool, from_pause: bool) -> void:
 
 
 func _show_summary(notice: String = "") -> void:
-	var detail := "%s fell. Your party reached the stairs with %d turns left.\n\nWins · %d\nAchievements · %s" % [
-		_run.boss_name(), _run.turns_left, _run.victories, ", ".join(_run.achievements)]
+	var detail := "%s fell. Your party reached the stairs with %s remaining.\n\nWins · %d\nAchievements · %s" % [
+		_run.boss_name(), _run.floor_time_text(), _run.victories, ", ".join(_run.achievements)]
 	detail += "\n\nSystem · " + _run.announcement
 	if not notice.is_empty():
 		detail += "\n\n" + notice
