@@ -100,7 +100,7 @@ Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dunge
 ## World structure
 
 - 18 floors grouped into themed tiers of three, each tier adding new tilesets, enemies, factions, and one new system or twist.
-- The opening vault has Latchknife Goblins salvaging the rooms between Ashfang and Watch patrols. Bellthread Spiders hunt from farther away in the Bell Galleries, where Amber Slimes absorb damage and Prize Mimics pose as supply chests. The armored Tithe Ossuary inhabits the keep on Floor 3, where Gutter Gargoyles stand guard.
+- The opening vault has Latchknife Goblins salvaging the rooms between Ashfang and Watch patrols. Snareweaver Spiders hunt from farther away in the Silkspire Galleries, where Amber Slimes absorb damage and Prize Mimics pose as supply chests. The armored Tithe Ossuary inhabits the keep on Floor 3, where Gutter Gargoyles stand guard.
 - Per floor: procedural layout stitched around hand-crafted rooms (safe rooms, boss arena, story rooms). A seed per floor is stored in the save, so a reload restores the same floor.
 - Early Access ships the first tiers; later tiers arrive in updates.
 

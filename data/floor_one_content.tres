@@ -15,7 +15,7 @@ foes = {
 "guard": {"name": "Barrow Sentinel", "hp": 32, "power": 9, "speed": 12, "xp": 15, "drop": "bandage", "wound": "arms", "faction": "watch", "material": "iron_scrap"},
 "goblin": {"name": "Latchknife Goblin", "hp": 21, "power": 6, "speed": 14, "xp": 9, "drop": "bandage", "faction": "scrappers", "material": "iron_scrap", "entrance": "A Latchknife Goblin snaps its scrap shears."},
 "slime": {"name": "Amber Slime", "hp": 38, "power": 8, "speed": 5, "armor": 2, "xp": 14, "drop": "tonic", "wound": "arms", "faction": "ashfang", "material": "bitterroot", "entrance": "Amber Slime oozes forward. Its thick rind blunts hits."},
-"spider": {"name": "Bellthread Spider", "hp": 29, "power": 10, "speed": 16, "xp": 15, "drop": "bandage", "wound": "legs", "faction": "ashfang", "material": "ashfang_pelt", "entrance": "The Bellthread Spider spins for your ankles."},
+"spider": {"name": "Snareweaver Spider", "hp": 29, "power": 10, "speed": 16, "xp": 15, "drop": "bandage", "wound": "legs", "faction": "ashfang", "material": "ashfang_pelt", "entrance": "The Snareweaver Spider spins for your ankles."},
 "skeleton": {"name": "Ledger Skeleton", "hp": 43, "power": 11, "speed": 10, "armor": 2, "xp": 19, "drop": "tonic", "wound": "torso", "faction": "ossuary", "material": "iron_scrap", "entrance": "A Ledger Skeleton rattles the coins inside its ribs."},
 "mimic": {"name": "Prize Mimic", "hp": 46, "power": 12, "speed": 10, "xp": 22, "drop": "silver_box", "wound": "arms", "faction": "scrappers", "material": "iron_scrap", "entrance": "The prize chest opens first. It has teeth."},
 "gargoyle": {"name": "Gutter Gargoyle", "hp": 54, "power": 12, "speed": 7, "armor": 3, "xp": 23, "drop": "bandage", "wound": "head", "faction": "ossuary", "material": "iron_scrap", "entrance": "The Gutter Gargoyle unfolds from its stone perch."},
@@ -85,7 +85,7 @@ classes = {
 }
 show = {
 "intro": {"line": "Sir Aldren, the Hollow Castellan, guards the stairs. Challenge him before the vault collapses."},
-"intro_2": {"line": "Welcome to the Bell Galleries. Marshal Ysra holds the stairs. A chest that opens on its own is not a gift."},
+"intro_2": {"line": "Welcome to the Silkspire Galleries. Marshal Ysra holds the stairs. A chest that opens on its own is not a gift."},
 "intro_3": {"line": "Welcome to the Tithe Keep. The dead have balanced the books. Lord Veyr is waiting to collect."},
 "first_blood": {"line": "First blood. Your bronze box is waiting back at camp.", "achievement": "First Blood", "box": "bronze_box"},
 "three_wins": {"line": "Three wins. The odds are getting awkward. Have a silver box.", "achievement": "Three for the Show", "box": "silver_box"},
