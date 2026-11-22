@@ -4,7 +4,9 @@ const GAME := preload("res://scenes/main.tscn")
 
 
 func test_projected_tile_centers_resolve_to_the_original_grid() -> void:
-	var game: DungeonGame = add_child_autofree(GAME.instantiate()) as DungeonGame
+	var game: DungeonGame = GAME.instantiate() as DungeonGame
+	game.prototype_mode = true
+	add_child_autofree(game)
 	var view: DungeonView = game.get_node("Dungeon")
 	var tiles: TileMapLayer = view.get_node("Tiles")
 	await wait_process_frames(1)
@@ -17,7 +19,9 @@ func test_projected_tile_centers_resolve_to_the_original_grid() -> void:
 
 
 func test_battle_buttons_take_the_party_back_to_a_changed_dungeon() -> void:
-	var game: DungeonGame = add_child_autofree(GAME.instantiate()) as DungeonGame
+	var game: DungeonGame = GAME.instantiate() as DungeonGame
+	game.prototype_mode = true
+	add_child_autofree(game)
 	var wait_button: Button = game.get_node("%Wait")
 	var hud: Control = game.get_node("Interface/HUD")
 	var map_panel: PanelContainer = game.get_node("%MapPanel")
@@ -35,6 +39,7 @@ func test_battle_buttons_take_the_party_back_to_a_changed_dungeon() -> void:
 	assert_not_null(battle, "The rat catches a party that waits three turns.")
 	if battle == null:
 		return
+	assert_eq(battle.rules.enemy.name, "Ashfang Dire Rat")
 	assert_false(hud.visible)
 	var flee: Button = battle.get_node("%Flee")
 	var proceed: Button = battle.get_node("%Continue")

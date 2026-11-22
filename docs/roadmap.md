@@ -11,7 +11,9 @@ One hand-built isometric dungeon with turn-stepped movement, field of view, a mi
 **Complete.** A rendered playthrough cleared all four encounters and verified keyboard, gamepad, and mouse movement. All 11 GUT tests passed, and local Windows and Linux release exports succeeded.
 
 ## Milestone 2: Vertical slice (floor 1)
-**Next.** Build one complete floor with procedural generation around a hand-crafted safe room and boss, a collapse timer, a party of up to four with one recruit, levelling, inventory and gear, injuries, saving and wipe reload, achievements with loot boxes, and the first announcer lines. Aim for a 30 to 60 minute playthrough to test the full loop.
+**Playable.** Floor 1 has a seeded layout, a hand-built safe room and boss chamber, a 420-turn collapse clock, one recruit, levelling and stat allocation, gear, persistent injuries, versioned checkpoints, and achievements with loot boxes and announcer lines.
+
+A rendered playthrough recruited Sable, opened both box tiers, defeated the Floor 1 boss, descended, and reopened the cleared save. Verify the 30 to 60 minute pacing target in a human playtest before closing this milestone.
 
 ## Milestone 3: Systems and demo (floors 1 to 3)
 **Planned.** Factions and reputation, crafting, viewers and sponsors, race and class selection, pets, full gamepad support, production art and audio pass, settings and accessibility options. Ends in a public demo and Steam page.
@@ -37,15 +39,15 @@ Work items in order through the demo.
 6. [x] `map-enemies` adds visible enemies that patrol, pursue the party, and start battles on contact.
 7. [x] `battle-core` adds a tested turn-based rules engine.
 8. [x] `battle-ui` adds a separate battle scene, command menu, and turn order.
-9. [ ] `data-pipeline` for data-driven items, monsters, and skills.
-10. [ ] `party-progression` for a party of four, stats, levelling, and recruits.
-11. [ ] `inventory-gear` for inventory, equipment, and loot drops.
-12. [ ] `injury-system` for body parts and persistent injuries.
-13. [ ] `floor-generation` for seeded hybrid floors.
-14. [ ] `safe-room-save` for safe rooms, save and load, and wipe reload.
-15. [ ] `collapse-timer` for the floor turn budget and collapse.
-16. [ ] `show-layer` for the event bus, achievements, loot boxes, and announcer.
-17. [ ] `vertical-slice` for Floor 1 content, the boss, and the playtest.
+9. [x] `data-pipeline` defines Floor 1 items, monsters, skills, rewards, and announcer lines in a Godot resource.
+10. [x] `party-progression` adds a four-member capacity, one recruit, XP, levels, and spendable stat points.
+11. [x] `inventory-gear` adds the pack, weapon and armor slots, supply caches, and loot drops.
+12. [x] `injury-system` adds persistent body-part wounds, combat penalties, bandages, and camp treatment.
+13. [x] `floor-generation` builds connected seeded layouts around authored safe and boss rooms.
+14. [x] `safe-room-save` adds three versioned slots, manual and entry saves, and checkpoint reload after a wipe.
+15. [x] `collapse-timer` tracks turns outside camp and reloads the checkpoint after collapse.
+16. [x] `show-layer` connects run events to achievements, loot boxes, and written announcer lines.
+17. [ ] `vertical-slice` has playable Floor 1 content and a verified boss clear. Human pacing playtest remains open.
 18. [ ] `factions` for faction behaviour and reputation.
 19. [ ] `crafting` for recipes and stations.
 20. [ ] `viewers-sponsors` for viewer count and sponsors.

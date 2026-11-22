@@ -51,6 +51,7 @@ layout_mode = 2
 theme_override_constants/separation = 14
 
 [node name="Title" type="Label" parent="Interface/HUD/Header/Readout"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "Dungeon Crawler"
@@ -61,6 +62,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.57, 0.88, 0.8, 1)
 horizontal_alignment = 1
+text_overrun_behavior = 3
 
 [node name="Remaining" type="Label" parent="Interface/HUD/Header/Readout"]
 unique_name_in_owner = true
@@ -70,6 +72,23 @@ theme_override_colors/font_color = Color(0.96, 0.68, 0.55, 1)
 [node name="Turn" type="Label" parent="Interface/HUD/Header/Readout"]
 unique_name_in_owner = true
 layout_mode = 2
+
+[node name="Broadcast" type="PanelContainer" parent="Interface/HUD"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchor_right = 1.0
+offset_left = 10.0
+offset_top = 45.0
+offset_right = -116.0
+mouse_filter = 2
+
+[node name="Announcer" type="Label" parent="Interface/HUD/Broadcast"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.94, 0.78, 0.55, 1)
 
 [node name="MapPanel" type="PanelContainer" parent="Interface/HUD"]
 unique_name_in_owner = true
@@ -85,7 +104,7 @@ mouse_filter = 2
 
 [node name="Minimap" type="Control" parent="Interface/HUD/MapPanel"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(84, 44)
+custom_minimum_size = Vector2(84, 48)
 layout_mode = 2
 mouse_filter = 2
 script = ExtResource("5_minimap")
@@ -110,6 +129,28 @@ theme_override_constants/separation = 6
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+text_overrun_behavior = 3
+
+[node name="Interact" type="Button" parent="Interface/HUD/Footer/Actions"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+focus_mode = 0
+text = "Use [E]"
+
+[node name="Party" type="Button" parent="Interface/HUD/Footer/Actions"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+focus_mode = 0
+text = "Party [C]"
+
+[node name="Inventory" type="Button" parent="Interface/HUD/Footer/Actions"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+focus_mode = 0
+text = "Pack [I]"
 
 [node name="Wait" type="Button" parent="Interface/HUD/Footer/Actions"]
 unique_name_in_owner = true

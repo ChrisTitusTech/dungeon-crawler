@@ -12,7 +12,7 @@ Approach: prove the core loop in a one-floor vertical slice, widen to a three-fl
 
 Milestones 0 and 1 are complete. Rook and Mira can explore a hand-built dungeon with fog of war and a minimap, then fight four encounters using Attack, Defend, Item, and Flee. HP and tonics carry between fights. A party wipe restarts the test map.
 
-The first campaign floor is the Milestone 2 vertical slice. It brings in procedural rooms, a safe room and save point, the collapse timer, party progression, gear, injuries, the boss, and the first show events. [Roadmap](roadmap.md)
+The Milestone 2 vertical slice is playable. Rook and Mira can recruit Sable, return to camp for treatment and loot boxes, and use the stairs after defeating Sir Aldren, the Hollow Castellan. The initial collapse budget is 420 turns outside camp. The human playtest will determine whether that budget suits the 30 to 60 minute pacing target. [Roadmap](roadmap.md)
 
 ## Key decisions
 
@@ -50,6 +50,7 @@ The first campaign floor is the Milestone 2 vertical slice. It brings in procedu
 - Visible enemies patrol, chase, flee, or fight each other according to faction relations.
 - Interactables: doors, chests, traps, crafting stations, NPCs, stairs.
 - Approaching an enemy from behind or unseen grants an opening advantage in battle; being ambushed gives the enemy one.
+- Name beasts by a distinctive trait and recognizable creature type, as in Ashfang Dire Rat. Name humanoid enemies by their posting or allegiance and role, as in Barrow Sentinel. Give bosses a personal name and medieval rank, with an epithet for introductions and lore. Floor 1 introduces Sir Aldren as the Hollow Castellan.
 
 ## Battle
 

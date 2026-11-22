@@ -7,6 +7,8 @@ const ROOK := 0
 const MIRA := 1
 const RAT := 2
 const GUARD := 3
+const SABLE := 4
+const CASTELLAN := 5
 
 
 static func region(index: int) -> Rect2:
@@ -22,4 +24,6 @@ static func icon(index: int) -> AtlasTexture:
 
 
 static func enemy_icon(kind: DungeonFloor.EnemyKind) -> int:
+	if kind == DungeonFloor.EnemyKind.BOSS:
+		return CASTELLAN
 	return RAT if kind == DungeonFloor.EnemyKind.RAT else GUARD

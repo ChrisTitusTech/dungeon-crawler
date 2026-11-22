@@ -3,6 +3,7 @@ extends Control
 
 const LAYOUT: DungeonLayout = preload("res://data/prototype_floor.tres")
 const BATTLE_SCREEN := preload("res://scenes/battle.tscn")
+const RUN_MENU := preload("res://scenes/campaign_menu.tscn")
 const MOVEMENT: Dictionary[StringName, Vector2i] = {
 	&"move_up": Vector2i.UP,
 	&"move_down": Vector2i.DOWN,
@@ -10,6 +11,10 @@ const MOVEMENT: Dictionary[StringName, Vector2i] = {
 	&"move_right": Vector2i.RIGHT,
 }
 const MOVE_HINT := "WASD, arrows, or click adjacent"
+const NO_SITE := Vector2i(-1, -1)
+
+@export var prototype_mode: bool = false
+@export var save_directory: String = "user://"
 
 @onready var _dungeon: DungeonView = $Dungeon
 @onready var _interface: CanvasLayer = $Interface
@@ -17,28 +22,62 @@ const MOVE_HINT := "WASD, arrows, or click adjacent"
 @onready var _minimap: DungeonMinimap = %Minimap
 @onready var _map_panel: PanelContainer = %MapPanel
 @onready var _roster: Label = %Roster
+@onready var _title: Label = %Title
 @onready var _turn: Label = %Turn
 @onready var _remaining: Label = %Remaining
 @onready var _status: Label = %Status
 @onready var _wait_button: Button = %Wait
 @onready var _map_button: Button = %Map
+@onready var _interact_button: Button = %Interact
+@onready var _party_button: Button = %Party
+@onready var _inventory_button: Button = %Inventory
+@onready var _broadcast: PanelContainer = %Broadcast
+@onready var _announcer: Label = %Announcer
 
 var _floor: DungeonFloor
 var _party: Array[BattleRules.Fighter] = []
 var _tonics: int
 var _battle: BattleView
+var _run: CampaignRun
+var _menu: CampaignMenu
+var _slot: int
+var _checkpoint: Dictionary
+var _can_close_menu: bool
 
 
 func _ready() -> void:
 	_wait_button.pressed.connect(_take_turn.bind(Vector2i.ZERO))
 	_map_button.pressed.connect(_toggle_minimap)
-	_start_floor()
+	if prototype_mode or "--prototype" in OS.get_cmdline_user_args():
+		_start_floor()
+		return
+	_interact_button.pressed.connect(_interact)
+	_party_button.pressed.connect(_show_party)
+	_inventory_button.pressed.connect(_show_inventory)
+	for control: Control in [_interact_button, _party_button, _inventory_button, _broadcast]:
+		control.show()
+	_menu = RUN_MENU.instantiate() as CampaignMenu
+	_interface.add_child(_menu)
+	_show_slots()
 
 
 func _process(_delta: float) -> void:
-	if _battle != null:
+	if not _can_explore():
 		return
 
+	if _run != null:
+		if Input.is_action_just_pressed(&"interact"):
+			_interact()
+			return
+		if Input.is_action_just_pressed(&"open_party"):
+			_show_party()
+			return
+		if Input.is_action_just_pressed(&"open_inventory"):
+			_show_inventory()
+			return
+		if Input.is_action_just_pressed(&"pause"):
+			_show_pause()
+			return
 	if Input.is_action_just_pressed(&"toggle_minimap"):
 		_toggle_minimap()
 	for action: StringName in MOVEMENT:
@@ -50,11 +89,19 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _battle == null and event is InputEventMouseButton and event.is_action_pressed(&"select_tile"):
+	if _menu != null and _menu.visible and _can_close_menu and event.is_action_pressed(&"ui_cancel"):
+		_hide_menu()
+		get_viewport().set_input_as_handled()
+		return
+	if _can_explore() and event is InputEventMouseButton and event.is_action_pressed(&"select_tile"):
 		var direction: Vector2i = _dungeon.cell_at_screen_position(event.position) - _floor.player
 		if absi(direction.x) + absi(direction.y) == 1:
 			_take_turn(direction)
 			get_viewport().set_input_as_handled()
+
+
+func _can_explore() -> bool:
+	return _floor != null and _battle == null and (_menu == null or not _menu.visible)
 
 
 func _start_floor() -> void:
@@ -69,28 +116,45 @@ func _start_floor() -> void:
 
 
 func _take_turn(direction: Vector2i) -> void:
-	if _battle != null or not _floor.take_turn(direction):
+	if not _can_explore():
+		return
+	var was_at_camp: bool = _run != null and _run.at_camp()
+	if not _floor.take_turn(direction):
 		return
 
+	var notice: String = MOVE_HINT
+	if _run != null:
+		_run.pass_turn()
+		if _run.turns_left <= 0:
+			_prompt_reload("The floor collapsed", "The last safe-room checkpoint is intact.")
+			return
+		if not was_at_camp and _run.at_camp():
+			notice = _save()
 	_dungeon.refresh()
-	_refresh_exploration(MOVE_HINT)
+	_refresh_exploration(notice)
 	if _floor.encounter != null:
 		_open_battle(_floor.encounter.kind)
 
 
 func _open_battle(enemy_kind: DungeonFloor.EnemyKind) -> void:
+	var enemy_id: String = CampaignRun.ENEMY_IDS[enemy_kind]
 	var opponent: BattleRules.Fighter
-	match enemy_kind:
-		DungeonFloor.EnemyKind.RAT:
-			opponent = BattleRules.Fighter.new("Cinder rat", 13, 4, 7)
-		DungeonFloor.EnemyKind.GUARD:
-			opponent = BattleRules.Fighter.new("Vault guard", 25, 7, 11)
+	if _run != null:
+		opponent = CampaignRun.CONTENT.make_fighter(enemy_id)
+	else:
+		var enemy_name: String = CampaignRun.CONTENT.foes[enemy_id].name
+		match enemy_kind:
+			DungeonFloor.EnemyKind.RAT:
+				opponent = BattleRules.Fighter.new(enemy_name, 13, 4, 7)
+			DungeonFloor.EnemyKind.GUARD:
+				opponent = BattleRules.Fighter.new(enemy_name, 25, 7, 11)
 	_battle = BATTLE_SCREEN.instantiate() as BattleView
 	_hud.hide()
 	_dungeon.hide()
 	_interface.add_child(_battle)
 	_battle.finished.connect(_close_battle)
-	_battle.start(BattleRules.new(_party, opponent, _tonics), enemy_kind)
+	var supplies: int = _run.count("tonic") if _run != null else _tonics
+	_battle.start(BattleRules.new(_party, opponent, supplies), enemy_kind, _run != null)
 
 
 func _close_battle(outcome: BattleRules.Outcome) -> void:
@@ -102,9 +166,14 @@ func _close_battle(outcome: BattleRules.Outcome) -> void:
 	_hud.show()
 
 	if outcome == BattleRules.Outcome.LOST:
-		_start_floor()
+		if _run == null:
+			_start_floor()
+		else:
+			_reload_checkpoint()
 		return
 
+	if _run != null:
+		_run.settle_battle(_floor.encounter, outcome, _tonics)
 	_floor.resolve_encounter(outcome == BattleRules.Outcome.WON)
 	_dungeon.refresh()
 	var notice := "Enemy defeated." if outcome == BattleRules.Outcome.WON else "You fled. The enemy is still nearby."
@@ -119,8 +188,274 @@ func _refresh_exploration(notice: String) -> void:
 	_turn.text = "Turn %d" % _floor.turn
 	_remaining.text = "%d foes left" % _floor.enemies.size()
 	_status.text = "Dungeon clear." if _floor.enemies.is_empty() else notice
+	if _run != null:
+		_title.text = "Floor 1"
+		_turn.text = "%d turns left" % _run.turns_left
+		_remaining.text = "Camp" if _run.at_camp() else "%d wins" % _run.victories
+		_announcer.text = "System · %s" % _run.announcement
+		_status.text = _exploration_hint() if notice == MOVE_HINT else notice
+		_interact_button.disabled = _interaction_cell() == NO_SITE and not _run.at_camp()
 	_minimap.refresh(_floor)
 
 
 func _toggle_minimap() -> void:
 	_map_panel.visible = not _map_panel.visible
+
+
+func _show_slots(message: String = "Choose a save slot to enter Floor 1.") -> void:
+	_run = null
+	_floor = null
+	_dungeon.hide()
+	_hud.hide()
+	var choices: Array[Dictionary] = []
+	for slot: int in range(1, CampaignSave.SLOT_COUNT + 1):
+		var saved: Dictionary = CampaignSave.read(save_directory, slot)
+		if CampaignSave.exists(save_directory, slot):
+			if not saved.is_empty():
+				var suffix: String = " · Cleared" if saved.get("completed", false) else " · Continue"
+				choices.append(CampaignMenu.choice("Slot %d%s" % [slot, suffix], _continue_slot.bind(slot)))
+			choices.append(CampaignMenu.choice("Replace slot %d" % slot, _confirm_replace.bind(slot)))
+		else:
+			choices.append(CampaignMenu.choice("Slot %d · New run" % slot, _new_slot.bind(slot)))
+	_present("Dungeon Crawler", message, choices, false)
+
+
+func _confirm_replace(slot: int) -> void:
+	_present("Replace slot %d?" % slot, "A new run replaces this slot’s checkpoint.", [
+		CampaignMenu.choice("Keep checkpoint", _show_slots),
+		CampaignMenu.choice("Start a new run", _new_slot.bind(slot)),
+	], false)
+
+
+func _new_slot(slot: int) -> void:
+	_slot = slot
+	_open_run(CampaignRun.new(randi()))
+	var message: String = _save()
+	_refresh_exploration(message)
+	_show_camp(message)
+
+
+func _continue_slot(slot: int) -> void:
+	var loaded: CampaignRun = CampaignRun.restore(CampaignSave.read(save_directory, slot))
+	if loaded == null:
+		_show_slots("That checkpoint could not be read. Choose another slot or replace it.")
+		return
+	_slot = slot
+	_checkpoint = loaded.snapshot()
+	_open_run(loaded)
+	if loaded.completed:
+		_show_summary()
+
+
+func _open_run(run: CampaignRun) -> void:
+	_run = run
+	_floor = run.floor
+	_party = run.party
+	_dungeon.load_floor(_floor, _party, _run)
+	_dungeon.show()
+	_hud.show()
+	_hide_menu()
+	_refresh_exploration(MOVE_HINT)
+
+
+func _save() -> String:
+	_checkpoint = _run.snapshot()
+	var error: Error = CampaignSave.write(save_directory, _slot, _checkpoint)
+	if error != OK:
+		push_warning("Floor 1 checkpoint write failed: %s" % error_string(error))
+		return "Checkpoint held in memory. Disk save failed."
+	return "Checkpoint saved."
+
+
+func _prompt_reload(title: String, detail: String) -> void:
+	_present(title, detail, [CampaignMenu.choice("Reload checkpoint", _reload_checkpoint)], false)
+
+
+func _reload_checkpoint() -> void:
+	var restored: CampaignRun = CampaignRun.restore(_checkpoint)
+	restored.event_occurred.emit("reload")
+	_open_run(restored)
+	_refresh_exploration("Checkpoint restored.")
+
+
+func _interaction_cell() -> Vector2i:
+	for offset: Vector2i in [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]:
+		var cell: Vector2i = _floor.player + offset
+		if not _floor.visible.has(cell):
+			continue
+		var terrain: String = _floor.terrain_at(cell)
+		if terrain == ">" or _run.fallen_gear.has(cell):
+			return cell
+		if terrain in ["c", "R"] and not _run.used_sites.has(cell):
+			return cell
+	return NO_SITE
+
+
+func _interact() -> void:
+	if not _can_explore() or _run == null:
+		return
+	if _run.at_camp():
+		_show_camp()
+		return
+	var cell: Vector2i = _interaction_cell()
+	if cell == NO_SITE:
+		return
+	if _run.fallen_gear.has(cell):
+		_run.loot_gear(cell)
+		_refresh_exploration("Recovered equipment.")
+	else:
+		match _floor.terrain_at(cell):
+			"c":
+				_run.collect_cache(cell)
+				_refresh_exploration("Supplies added to the pack.")
+			"R":
+				if _run.recruit(cell):
+					_refresh_exploration("Sable joined the party.")
+			">":
+				if _run.escape(cell):
+					var result: String = _save()
+					_show_summary(result)
+				else:
+					_refresh_exploration("Defeat %s first." % _run.boss_name())
+	_dungeon.refresh()
+
+
+func _exploration_hint() -> String:
+	if _run.at_camp():
+		return "Safe room · Use to open camp"
+	var site: Vector2i = _interaction_cell()
+	if _run.fallen_gear.has(site):
+		return "Use to recover equipment"
+	match _floor.terrain_at(site):
+		"c": return "Use to take supplies"
+		"R": return "Use to talk to Sable"
+		">": return "Use to descend" if _run.boss_defeated else "%s holds the stairs" % _run.boss_name()
+	return "Find the stairs" if _run.boss_defeated else "Find %s" % _run.boss_name()
+
+
+func _show_camp(message: String = "") -> void:
+	var detail := "The collapse clock runs outside camp. Rest heals standing allies and treats injuries."
+	if not message.is_empty():
+		detail = message + "\n\n" + detail
+	_present("Safe room", detail, [
+		CampaignMenu.choice("Explore Floor 1", _hide_menu),
+		CampaignMenu.choice("Rest and treat injuries", _rest_party),
+		CampaignMenu.choice("Save checkpoint", _save_at_camp),
+		CampaignMenu.choice("Pack and loot boxes", _show_inventory),
+		CampaignMenu.choice("Party and achievements", _show_party),
+	])
+
+
+func _rest_party() -> void:
+	_run.rest()
+	_save_at_camp()
+
+
+func _save_at_camp() -> void:
+	var message: String = _save()
+	_refresh_exploration(message)
+	_show_camp(message)
+
+
+func _show_inventory() -> void:
+	var choices: Array[Dictionary] = []
+	var labels: Array = _run.inventory.keys()
+	labels.sort()
+	for item: String in labels:
+		var definition: Dictionary = CampaignRun.CONTENT.items[item]
+		var label: String = "%s ×%d" % [definition.name, _run.count(item)]
+		if definition.has("loot"):
+			choices.append(CampaignMenu.choice("Open %s" % label, _open_box.bind(item), not _run.at_camp()))
+		else:
+			choices.append(CampaignMenu.choice(label, _choose_item_target.bind(item)))
+	choices.append(CampaignMenu.choice("Back", _show_camp if _run.at_camp() else _hide_menu))
+	_present("Party pack", "Open reward boxes in the safe room. Select supplies or equipment to choose a party member.", choices)
+
+
+func _open_box(item: String) -> void:
+	if _run.open_box(item):
+		_refresh_exploration(_save())
+		_show_inventory()
+
+
+func _choose_item_target(item: String) -> void:
+	var choices: Array[Dictionary] = []
+	var definition: Dictionary = CampaignRun.CONTENT.items[item]
+	for member: BattleRules.Fighter in _party:
+		var disabled: bool = member.hp == 0
+		if item == "tonic":
+			disabled = disabled or member.hp >= member.max_hp
+		elif item == "bandage":
+			disabled = disabled or member.injuries.is_empty()
+		choices.append(CampaignMenu.choice("%s · %d/%d HP" % [member.name, member.hp, member.max_hp],
+			_apply_item.bind(member, item), disabled))
+	choices.append(CampaignMenu.choice("Back to pack", _show_inventory))
+	_present(definition.name, definition.description, choices)
+
+
+func _apply_item(member: BattleRules.Fighter, item: String) -> void:
+	var definition: Dictionary = CampaignRun.CONTENT.items[item]
+	var applied: bool = _run.equip(member, item) if definition.has("slot") else _run.heal(member, item)
+	if applied:
+		_refresh_exploration(_save() if _run.at_camp() else "Used %s." % definition.name)
+		_show_inventory()
+
+
+func _show_party() -> void:
+	var lines := PackedStringArray()
+	var choices: Array[Dictionary] = []
+	for member: BattleRules.Fighter in _party:
+		var state: String = "Fallen" if member.hp == 0 else "%d/%d HP" % [member.hp, member.max_hp]
+		lines.append("%s · Lv %d · %s · %d/%d XP" % [member.name, member.level, state, member.xp, member.level * 15])
+		if member.hp > 0:
+			var weapon: String = CampaignRun.CONTENT.items.get(member.weapon, {}).get("name", "Bare hands")
+			var armor: String = CampaignRun.CONTENT.items.get(member.armor, {}).get("name", "No armor")
+			lines.append("%s · %s · ATK %d · SPD %d" % [weapon, armor, member.attack_power(), member.initiative()])
+			if member.stat_points > 0:
+				choices.append(CampaignMenu.choice("Train %s · %d available" % [member.name, member.stat_points],
+					_show_training.bind(member)))
+		if not member.injuries.is_empty() and member.hp > 0:
+			lines.append("Injuries · %s" % ", ".join(member.injuries.keys()))
+	lines.append("Achievements · %s" % (", ".join(_run.achievements) if not _run.achievements.is_empty() else "None yet"))
+	choices.append(CampaignMenu.choice("Back", _show_camp if _run.at_camp() else _hide_menu))
+	_present("Party", "\n".join(lines), choices)
+
+
+func _show_training(member: BattleRules.Fighter) -> void:
+	_present("Train %s" % member.name, "Available stat points · %d" % member.stat_points, [
+		CampaignMenu.choice("Attack +1", _train.bind(member, "power")),
+		CampaignMenu.choice("Speed +1", _train.bind(member, "speed")),
+		CampaignMenu.choice("Max HP +4", _train.bind(member, "health")),
+		CampaignMenu.choice("Back to party", _show_party),
+	])
+
+
+func _train(member: BattleRules.Fighter, stat: String) -> void:
+	if member.spend_stat_point(stat):
+		_refresh_exploration(_save() if _run.at_camp() else "Training applied.")
+		_show_party()
+
+
+func _show_pause() -> void:
+	_present("Paused", "Use the safe room to record progress. Returning to the slot menu ends this session.", [
+		CampaignMenu.choice("Resume", _hide_menu),
+		CampaignMenu.choice("Return to save slots", _show_slots),
+	])
+
+
+func _show_summary(notice: String = "") -> void:
+	var detail := "%s fell. Your party reached the stairs with %d turns left.\n\nWins · %d\nAchievements · %s" % [
+		_run.boss_name(), _run.turns_left, _run.victories, ", ".join(_run.achievements)]
+	detail += "\n\nSystem · " + _run.announcement
+	if not notice.is_empty():
+		detail += "\n\n" + notice
+	_present("Floor 1 cleared", detail, [CampaignMenu.choice("Return to save slots", _show_slots)], false)
+
+
+func _present(title: String, detail: String, choices: Array[Dictionary], dismissible: bool = true) -> void:
+	_can_close_menu = dismissible
+	_menu.present(title, detail, choices)
+
+
+func _hide_menu() -> void:
+	_menu.hide()

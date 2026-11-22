@@ -6,9 +6,7 @@ You are a contestant in a lethal, televised 18-floor dungeon run by a snarky Sys
 
 ## Status
 
-**Milestones 0 and 1 are complete.** The playable prototype starts in a hand-built isometric dungeon with four enemies. Explore with Rook and Mira, then defeat all four encounters to clear the floor.
-
-Milestone 2 is the Floor 1 vertical slice. [Roadmap](docs/roadmap.md)
+**Milestones 0 and 1 are complete.** The Milestone 2 vertical slice is playable. Start in a safe room, recruit Sable, and defeat Sir Aldren, the Hollow Castellan, before Floor 1 collapses. A human pacing playtest is still open. [Roadmap](docs/roadmap.md)
 
 ## Documentation
 
@@ -21,18 +19,26 @@ Milestone 2 is the Floor 1 vertical slice. [Roadmap](docs/roadmap.md)
 
 Install the tools, then open `project.godot` in the editor or run `godot --editor --path .` from the repo root. Press F5 to run the project. [Prerequisites](PREREQUISITES.md)
 
-### Prototype controls
+### Play Floor 1
+
+Choose one of three save slots. The safe room saves a checkpoint when you enter and offers a manual save, healing, and loot-box opening. The collapse clock advances with movement and waiting outside camp. A wipe or collapse restores the last checkpoint.
+
+Party HP, injuries, and equipment carry between fights. The pack lets you use tonics, treat wounds, and equip loot. Spend earned stat points from the Party menu. Each fighter gets one use of their skill per battle. After defeating Sir Aldren, use the stairs to clear the floor.
 
 | Action | Keyboard | Gamepad | Mouse |
 | --- | --- | --- | --- |
 | Move one tile | WASD or arrow keys | D-pad or left stick | Click an adjacent tile |
 | Wait one turn | Q | Right shoulder button | Wait button |
+| Use a nearby landmark or open camp | E | A | Use button |
+| Open party and training | C | Y | Party button |
+| Open inventory | I | X | Pack button |
 | Toggle minimap | M | Back / View | Map button |
 | Choose a battle command | Arrow keys and Enter | D-pad and A | Click a command |
+| Pause | P | Start / Menu | |
 
 Movement follows the diagonal tile edges of the isometric view.
 
-Party HP and tonics carry between fights. Fleeing leaves the enemy on the map and gives the party one turn to move away. A full defeat offers a retry from the entrance.
+Fleeing leaves the enemy on the map and gives the party one turn to move away. To revisit the original hand-built prototype, run `godot --path . -- --prototype`.
 
 ### Run tests
 

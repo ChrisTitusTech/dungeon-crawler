@@ -9,8 +9,13 @@
 - GUT 9.7.1 covers project setup, dungeon rules, combat rules, and scene integration. GitHub Actions runs the tests and exports Windows and Linux release builds. [CI workflow](../.github/workflows/ci.yml)
 - The repository keeps scenes in `scenes/`, game and presentation code in `scripts/`, and content in `data/` and `assets/`. Tests and design documents live in `tests/` and `docs/`.
 
+## Floor 1 vertical slice
+
+- `FloorOneGenerator` uses the run seed for procedural chambers, corridors, and encounter placement. Authored templates anchor the safe room and boss chamber.
+- `CampaignRun` owns party progression, the inventory, explored sites, the collapse clock, and show events. `CampaignContent` loads heroes, enemies, items, skills, reward tables, and announcer lines from a Godot resource.
+- `CampaignSave` stores a versioned snapshot per slot under `user://`. Checkpoints record the seed, party, inventory, enemies, explored cells, and clock. Collapse and party wipes restore the latest checkpoint, and a Floor 1 clear records the completed run.
+
 ## Planned architecture
 
-- Move items, monsters, skills, recipes, factions, achievements, and announcer lines into Godot `Resource` or JSON data files as their systems are built.
-- Use a seeded generator to connect hand-crafted room templates with procedural rooms and corridors, then check connectivity.
-- Introduce autoloads for game state, saving, events, audio, and scene transitions as those systems come online. Route achievement, viewer, and announcer updates through one event bus.
+- Extend the data catalog with recipes, factions, and content for later floors.
+- Promote run-level state and services to autoloads as the campaign grows across floors. Extend the existing event routing to viewers and sponsors.

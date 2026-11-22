@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="CampaignContent" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/campaign_content.gd" id="1_content"]
+
+[resource]
+script = ExtResource("1_content")
+heroes = {
+"rook": {"name": "Rook", "hp": 28, "power": 7, "speed": 9, "portrait": 0, "skill": "cleave"},
+"mira": {"name": "Mira", "hp": 22, "power": 6, "speed": 13, "portrait": 1, "skill": "trip"},
+"sable": {"name": "Sable", "hp": 25, "power": 6, "speed": 11, "portrait": 4, "skill": "brace"}
+}
+foes = {
+"rat": {"name": "Ashfang Dire Rat", "hp": 17, "power": 5, "speed": 8, "portrait": 2, "xp": 7, "drop": "tonic"},
+"guard": {"name": "Barrow Sentinel", "hp": 32, "power": 9, "speed": 12, "portrait": 3, "xp": 15, "drop": "bandage", "wound": "arms"},
+"warden": {"name": "Sir Aldren", "hp": 96, "power": 15, "speed": 15, "portrait": 5, "xp": 35, "drop": "warden_blade", "wound": "torso"}
+}
+items = {
+"tonic": {"name": "Tonic", "description": "Heal a standing ally for up to 9 HP."},
+"bandage": {"name": "Bandage", "description": "Treat one injury."},
+"iron_blade": {"name": "Iron blade", "slot": "weapon", "bonus": 3, "description": "+3 attack"},
+"hide_coat": {"name": "Hide coat", "slot": "armor", "bonus": 2, "description": "Blocks 2 damage"},
+"warden_blade": {"name": "Castellan’s Longsword", "slot": "weapon", "bonus": 6, "description": "+6 attack"},
+"bronze_box": {"name": "Bronze box", "loot": ["tonic", "bandage", "iron_blade"]},
+"silver_box": {"name": "Silver box", "loot": ["tonic", "tonic", "hide_coat"]}
+}
+skills = {
+"cleave": {"name": "Cleave", "bonus": 5, "wound": "arms"},
+"trip": {"name": "Hamstring", "bonus": 3, "wound": "legs"},
+"brace": {"name": "Breaking strike", "bonus": 4, "wound": "head"}
+}
+show = {
+"intro": {"line": "Sir Aldren, the Hollow Castellan, guards the stairs. Challenge him before the vault collapses."},
+"first_blood": {"line": "First blood. Your bronze box is waiting back at camp.", "achievement": "First Blood", "box": "bronze_box"},
+"three_wins": {"line": "Three wins. The odds are getting awkward. Have a silver box.", "achievement": "Three for the Show", "box": "silver_box"},
+"recruit": {"line": "Sable joins your party. Apparently the waiver is transferable.", "achievement": "One More Seat", "box": "bronze_box"},
+"warden": {"line": "Sir Aldren has fallen. Take the stairs before the vault buries you both."},
+"warning": {"line": "The ceiling has started counting along. You have 100 turns."},
+"urgent": {"line": "Forty turns. Leave the sightseeing to your ghost."},
+"critical": {"line": "Ten turns left. I did tell you where the stairs were."},
+"escape": {"line": "Floor 1 cleared. Try to look less surprised.", "achievement": "Still Standing"},
+"reload": {"line": "Back at camp. This time try keeping the party alive."}
+}

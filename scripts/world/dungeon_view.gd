@@ -14,11 +14,13 @@ const ENEMY_MARK := Color(0.98, 0.55, 0.43, 0.7)
 
 var _floor: DungeonFloor
 var _party: Array[BattleRules.Fighter]
+var _campaign: CampaignRun
 
 
-func load_floor(floor_state: DungeonFloor, party: Array[BattleRules.Fighter]) -> void:
+func load_floor(floor_state: DungeonFloor, party: Array[BattleRules.Fighter], campaign: CampaignRun = null) -> void:
 	_floor = floor_state
 	_party = party
+	_campaign = campaign
 	_tiles.clear()
 	refresh()
 
@@ -72,18 +74,41 @@ func _draw_cell(cell: Vector2i) -> void:
 	if not is_visible:
 		return
 
+	if _campaign != null:
+		_draw_landmark(cell, center, terrain)
 	if cell == _floor.player:
 		_draw_outline(center, Vector2(14, 7), PARTY_MARK)
-		if _party[1].hp > 0:
-			_draw_actor(center + Vector2(-6, -2), PrototypeArt.MIRA, 31.0)
-		if _party[0].hp > 0:
-			_draw_actor(center + Vector2(6, 4), PrototypeArt.ROOK, 37.0)
+		var standing: int = 0
+		for member: BattleRules.Fighter in _party:
+			if member.hp == 0:
+				continue
+			var portrait: int = member.portrait if member.portrait >= 0 else mini(standing, PrototypeArt.MIRA)
+			var offset := Vector2(standing * -7 + 6, standing * -3 + 4)
+			_draw_actor(center + offset, portrait, 34.0 if standing == 0 else 28.0)
+			standing += 1
 		return
 
 	var enemy: DungeonFloor.Enemy = _floor.enemy_at(cell)
 	if enemy != null:
 		_draw_outline(center, Vector2(12, 6), ENEMY_MARK)
-		_draw_actor(center + Vector2(0, 4), PrototypeArt.enemy_icon(enemy.kind), 35.0)
+		_draw_actor(center + Vector2(0, 4), PrototypeArt.enemy_icon(enemy.kind),
+			48.0 if enemy.kind == DungeonFloor.EnemyKind.BOSS else 35.0)
+
+
+func _draw_landmark(cell: Vector2i, center: Vector2, terrain: String) -> void:
+	if _campaign.fallen_gear.has(cell):
+		_draw_outline(center, Vector2(8, 4), Color("#c89b66"))
+	if terrain == ">" or terrain == "S":
+		var color := Color("#e8c07b") if terrain == ">" else PARTY_MARK
+		for offset: int in [-2, 1, 4]:
+			draw_line(center + Vector2(-6, offset), center + Vector2(6, offset), color)
+	elif not _campaign.used_sites.has(cell):
+		if terrain == "c":
+			draw_rect(Rect2(center + Vector2(-5, -4), Vector2(10, 6)), Color("#5c4034"))
+			draw_line(center + Vector2(-5, -4), center + Vector2(5, -4), Color("#ebbb74"))
+		elif terrain == "R":
+			_draw_outline(center, Vector2(10, 5), PARTY_MARK)
+			_draw_actor(center + Vector2(0, 3), PrototypeArt.SABLE, 31.0)
 
 
 func _wall_region(cell: Vector2i) -> Rect2:

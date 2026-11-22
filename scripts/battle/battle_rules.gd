@@ -1,7 +1,7 @@
 class_name BattleRules
 extends RefCounted
 
-enum Command { ATTACK, DEFEND, ITEM, FLEE }
+enum Command { ATTACK, DEFEND, ITEM, FLEE, SKILL }
 enum Outcome { IN_PROGRESS, WON, FLED, LOST }
 
 class Fighter:
@@ -11,6 +11,19 @@ class Fighter:
 	var power: int
 	var speed: int
 	var guarding: bool = false
+	var id: String
+	var portrait: int = -1
+	var level: int = 1
+	var xp: int = 0
+	var stat_points: int = 0
+	var weapon: String
+	var armor: String
+	var weapon_bonus: int
+	var armor_bonus: int
+	var injuries: Dictionary[String, bool] = {}
+	var skill: Dictionary
+	var skill_ready: bool
+	var wound: String
 
 	func _init(fighter_name: String, health: int, attack_power: int, initiative: int) -> void:
 		name = fighter_name
@@ -18,6 +31,37 @@ class Fighter:
 		hp = health
 		power = attack_power
 		speed = initiative
+
+	func attack_power() -> int:
+		return maxi(1, power + weapon_bonus - (2 if injuries.has("arms") else 0))
+
+	func initiative() -> int:
+		return speed - (2 if injuries.has("head") else 0) - (3 if injuries.has("legs") else 0)
+
+	func earn_experience(amount: int) -> void:
+		if hp == 0:
+			return
+		xp += amount
+		while xp >= level * 15:
+			xp -= level * 15
+			level += 1
+			stat_points += 1
+			max_hp += 4
+			hp += 4
+			power += 1
+
+	func spend_stat_point(stat: String) -> bool:
+		if hp == 0 or stat_points == 0:
+			return false
+		match stat:
+			"power": power += 1
+			"speed": speed += 1
+			"health":
+				max_hp += 4
+				hp += 4
+			_: return false
+		stat_points -= 1
+		return true
 
 
 const POTION_HEAL := 9
@@ -30,6 +74,7 @@ var messages: PackedStringArray = []
 
 var _initiative: Array[Fighter]
 var _turn_index: int = 0
+var _enemy_actions: int = 0
 
 
 func _init(members: Array[Fighter], opponent: Fighter, supplies: int) -> void:
@@ -38,11 +83,9 @@ func _init(members: Array[Fighter], opponent: Fighter, supplies: int) -> void:
 	potions = supplies
 	_initiative = party.duplicate()
 	_initiative.append(enemy)
-	_initiative.sort_custom(func(left: Fighter, right: Fighter) -> bool:
-		return left.speed > right.speed
-	)
 	for fighter: Fighter in _initiative:
 		fighter.guarding = false
+		fighter.skill_ready = not fighter.skill.is_empty()
 	_turn_index = _initiative.size() - 1
 	_finish_action()
 	_log("%s blocks your path." % enemy.name)
@@ -81,6 +124,11 @@ func use_command(command: Command) -> bool:
 	match command:
 		Command.ATTACK:
 			_hit(actor, enemy)
+		Command.SKILL:
+			if not actor.skill_ready:
+				return false
+			actor.skill_ready = false
+			_hit(actor, enemy, actor.skill.bonus, actor.skill.wound)
 		Command.DEFEND:
 			actor.guarding = true
 			_log("%s braces for the next hit." % actor.name)
@@ -105,19 +153,27 @@ func take_enemy_turn() -> void:
 		return
 	for member: Fighter in party:
 		if member.hp > 0:
-			_hit(enemy, member)
+			_enemy_actions += 1
+			var wound: String = enemy.wound if _enemy_actions % 2 == 0 else ""
+			_hit(enemy, member, 0, wound)
 			_finish_action()
 			return
 
 
-func _hit(attacker: Fighter, target: Fighter) -> void:
-	var power: int = ceili(attacker.power / 2.0) if target.guarding else attacker.power
-	var damage: int = mini(power, target.hp)
+func _hit(attacker: Fighter, target: Fighter, bonus: int = 0, wound: String = "") -> void:
+	var force: int = maxi(1, attacker.attack_power() + bonus - target.armor_bonus)
+	if target.injuries.has("torso"):
+		force += 2
+	var was_guarding: bool = target.guarding
+	var damage: int = mini(ceili(force / 2.0) if was_guarding else force, target.hp)
 	target.guarding = false
 	target.hp -= damage
 	_log("%s hits %s for %d." % [attacker.name, target.name, damage])
 	if target.hp == 0:
 		_log("%s goes down." % target.name)
+	elif not was_guarding and not wound.is_empty() and not target.injuries.has(wound):
+		target.injuries[wound] = true
+		_log("%s suffers a %s injury." % [target.name, wound])
 
 
 func _finish_action() -> void:
@@ -128,10 +184,21 @@ func _finish_action() -> void:
 		outcome = Outcome.LOST
 		return
 
-	_turn_index = (_turn_index + 1) % _initiative.size()
+	_advance_initiative()
 	while _initiative[_turn_index].hp == 0:
-		_turn_index = (_turn_index + 1) % _initiative.size()
+		_advance_initiative()
 	_initiative[_turn_index].guarding = false
+
+
+func _advance_initiative() -> void:
+	_turn_index += 1
+	if _turn_index == _initiative.size():
+		_turn_index = 0
+		_initiative.sort_custom(func(left: Fighter, right: Fighter) -> bool:
+			if left.initiative() == right.initiative():
+				return left.name < right.name
+			return left.initiative() > right.initiative()
+		)
 
 
 func _log(message: String) -> void:

@@ -1,7 +1,6 @@
 class_name DungeonMinimap
 extends Control
 
-const SCALE := 2
 const WALL := Color("#626f78")
 const FLOOR := Color("#304b4f")
 const VISIBLE := Color("#648f8c")
@@ -20,14 +19,20 @@ func _draw() -> void:
 	if _floor == null:
 		return
 
-	var origin: Vector2 = ((size - Vector2(_floor.size * SCALE)) / 2.0).floor()
+	var tile: float = minf(2.0, floorf(minf(size.x / _floor.size.x, size.y / _floor.size.y)))
+	tile = maxf(1.0, tile)
+	var origin: Vector2 = ((size - Vector2(_floor.size) * tile) / 2.0).floor()
 	for cell: Vector2i in _floor.explored:
 		var color: Color = WALL
 		if _floor.is_walkable(cell):
 			color = VISIBLE if _floor.visible.has(cell) else FLOOR
-		draw_rect(Rect2(origin + Vector2(cell * SCALE), Vector2(SCALE, SCALE)), color)
+			if _floor.safe_room.has_point(cell):
+				color = Color("#448078")
+			elif _floor.terrain_at(cell) == ">":
+				color = Color("#e8c07b")
+		draw_rect(Rect2(origin + Vector2(cell) * tile, Vector2.ONE * tile), color)
 
 	for enemy: DungeonFloor.Enemy in _floor.enemies:
 		if _floor.visible.has(enemy.cell):
-			draw_rect(Rect2(origin + Vector2(enemy.cell * SCALE), Vector2(SCALE, SCALE)), ENEMY)
-	draw_rect(Rect2(origin + Vector2(_floor.player * SCALE) - Vector2.ONE, Vector2(4, 4)), PLAYER)
+			draw_rect(Rect2(origin + Vector2(enemy.cell) * tile, Vector2.ONE * tile), ENEMY)
+	draw_rect(Rect2(origin + Vector2(_floor.player) * tile - Vector2.ONE, Vector2.ONE * (tile + 2)), PLAYER)

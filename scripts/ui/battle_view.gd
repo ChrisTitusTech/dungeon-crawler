@@ -13,6 +13,7 @@ const ENEMY_ACCENT := Color("#fa987e")
 @onready var _log: Label = %BattleLog
 @onready var _commands: HBoxContainer = %Commands
 @onready var _attack: Button = %Attack
+@onready var _skill: Button = %Skill
 @onready var _defend: Button = %Defend
 @onready var _item: Button = %Item
 @onready var _flee: Button = %Flee
@@ -22,10 +23,12 @@ const ENEMY_ACCENT := Color("#fa987e")
 var rules: BattleRules
 var _party_cards: Array[BattleFighterView] = []
 var _enemy_card: BattleFighterView
+var _uses_checkpoint: bool
 
 
 func _ready() -> void:
 	_attack.pressed.connect(_choose.bind(BattleRules.Command.ATTACK))
+	_skill.pressed.connect(_choose.bind(BattleRules.Command.SKILL))
 	_defend.pressed.connect(_choose.bind(BattleRules.Command.DEFEND))
 	_item.pressed.connect(_choose.bind(BattleRules.Command.ITEM))
 	_flee.pressed.connect(_choose.bind(BattleRules.Command.FLEE))
@@ -33,10 +36,13 @@ func _ready() -> void:
 	_enemy_delay.timeout.connect(_enemy_turn)
 
 
-func start(battle: BattleRules, enemy_kind: DungeonFloor.EnemyKind) -> void:
+func start(battle: BattleRules, enemy_kind: DungeonFloor.EnemyKind, uses_checkpoint: bool = false) -> void:
 	rules = battle
+	_uses_checkpoint = uses_checkpoint
 	for index: int in rules.party.size():
-		var card: BattleFighterView = _add_card(PARTY_PORTRAITS[index % PARTY_PORTRAITS.size()])
+		var fighter: BattleRules.Fighter = rules.party[index]
+		var portrait: int = fighter.portrait if fighter.portrait >= 0 else PARTY_PORTRAITS[index % PARTY_PORTRAITS.size()]
+		var card: BattleFighterView = _add_card(portrait)
 		_party_cards.append(card)
 	_enemy_card = _add_card(PrototypeArt.enemy_icon(enemy_kind))
 	_render()
@@ -85,12 +91,18 @@ func _render() -> void:
 
 	var can_act: bool = not resolved and actor != rules.enemy
 	_attack.disabled = not can_act
+	_skill.visible = rules.party.any(func(member: BattleRules.Fighter) -> bool: return not member.skill.is_empty())
+	_skill.disabled = not can_act or not actor.skill_ready
+	_skill.text = actor.skill.get("name", "Skill") if can_act else "Skill"
+	_skill.tooltip_text = actor.skill.get("name", "") + " · Once per fight" if can_act else ""
 	_defend.disabled = not can_act
 	_flee.disabled = not can_act
 	_item.disabled = not can_act or rules.potions == 0 or rules.potion_target() == null
 	_item.text = "Item (%d)" % rules.potions
 	_continue.visible = resolved
-	_continue.text = "Retry floor" if rules.outcome == BattleRules.Outcome.LOST else "Back to dungeon"
+	_continue.text = "Back to dungeon"
+	if rules.outcome == BattleRules.Outcome.LOST:
+		_continue.text = "Reload checkpoint" if _uses_checkpoint else "Retry floor"
 	_commands.visible = not resolved
 
 	if resolved:

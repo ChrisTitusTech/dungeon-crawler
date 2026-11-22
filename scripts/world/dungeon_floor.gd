@@ -1,7 +1,7 @@
 class_name DungeonFloor
 extends RefCounted
 
-enum EnemyKind { RAT, GUARD }
+enum EnemyKind { RAT, GUARD, BOSS }
 
 class Enemy:
 	var kind: EnemyKind
@@ -23,6 +23,7 @@ const CARDINALS: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT
 var size: Vector2i
 var player: Vector2i
 var turn: int = 0
+var safe_room: Rect2i
 var enemies: Array[Enemy] = []
 var encounter: Enemy
 var visible: Dictionary[Vector2i, bool] = {}
@@ -32,8 +33,9 @@ var _rows: PackedStringArray
 var _reprieved_enemy: Enemy
 
 
-func _init(rows: PackedStringArray) -> void:
+func _init(rows: PackedStringArray, sanctuary: Rect2i = Rect2i()) -> void:
 	_rows = rows
+	safe_room = sanctuary
 	size = Vector2i(rows[0].length(), rows.size())
 	for y: int in size.y:
 		for x: int in size.x:
@@ -42,11 +44,12 @@ func _init(rows: PackedStringArray) -> void:
 				"S": player = cell
 				"r": enemies.append(Enemy.new(EnemyKind.RAT, cell))
 				"g": enemies.append(Enemy.new(EnemyKind.GUARD, cell))
+				"b": enemies.append(Enemy.new(EnemyKind.BOSS, cell))
 
 	for enemy: Enemy in enemies:
 		for direction: Vector2i in CARDINALS:
 			var endpoint: Vector2i = enemy.home + direction
-			if is_walkable(endpoint) and enemy_at(endpoint) == null:
+			if not safe_room.has_point(endpoint) and is_walkable(endpoint) and enemy_at(endpoint) == null:
 				enemy.patrol_end = endpoint
 				break
 	_update_visibility()
@@ -94,13 +97,28 @@ func resolve_encounter(won: bool) -> void:
 	encounter = null
 
 
+func restore_checkpoint(position: Vector2i, steps: int, positions: Dictionary, visited: Array) -> void:
+	player = position
+	turn = steps
+	for index: int in range(enemies.size() - 1, -1, -1):
+		var enemy: Enemy = enemies[index]
+		if positions.has(enemy.home):
+			enemy.cell = positions[enemy.home]
+		else:
+			enemies.remove_at(index)
+	explored.clear()
+	for cell: Vector2i in visited:
+		explored[cell] = true
+	_update_visibility()
+
+
 func _advance_enemies() -> void:
 	for enemy: Enemy in enemies:
-		if enemy == _reprieved_enemy:
+		if enemy == _reprieved_enemy or enemy.kind == EnemyKind.BOSS:
 			continue
 
 		var goal: Vector2i = enemy.patrol_end if enemy.cell == enemy.home else enemy.home
-		if enemy.cell.distance_squared_to(player) <= CHASE_RADIUS * CHASE_RADIUS:
+		if not safe_room.has_point(player) and enemy.cell.distance_squared_to(player) <= CHASE_RADIUS * CHASE_RADIUS:
 			if _has_line_of_sight(enemy.cell, player):
 				goal = player
 
@@ -117,7 +135,7 @@ func _step_toward(origin: Vector2i, goal: Vector2i) -> Vector2i:
 	for direction: Vector2i in CARDINALS:
 		var step: Vector2i = origin + direction
 		var distance: int = step.distance_squared_to(goal)
-		if distance < best_distance and is_walkable(step) and enemy_at(step) == null:
+		if distance < best_distance and not safe_room.has_point(step) and is_walkable(step) and enemy_at(step) == null:
 			next = step
 			best_distance = distance
 	return next
