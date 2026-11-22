@@ -9,7 +9,7 @@ const FLOOR_TIME_SECONDS := 30 * 60
 const PARTY_LIMIT := 4
 const PET_ID := "cinder"
 const BOSS_ID := "warden"
-const ENEMY_IDS := ["rat", "guard", BOSS_ID]
+const ENEMY_IDS := ["rat", "guard", BOSS_ID, "goblin", "slime", "spider", "skeleton", "mimic", "gargoyle"]
 const FLOOR_BOSSES := [BOSS_ID, "marshal", "regent"]
 const LAST_FLOOR := 3
 const LATER_LAYOUTS: Dictionary[int, DungeonLayout] = {
@@ -60,7 +60,8 @@ func _load_floor() -> void:
 		layout = FloorOneGenerator.new().generate(seed)
 	else:
 		layout = LATER_LAYOUTS[floor_number]
-	floor = DungeonFloor.new(layout.rows, layout.safe_room)
+	var vision: int = DungeonFloor.SIGHT_RADIUS + CONTENT.races.get(race_id, {}).get("sight", 0)
+	floor = DungeonFloor.new(layout.rows, layout.safe_room, vision)
 	refuge_door = layout.refuge_door
 	refuge = DungeonFloor.new(REFUGE_LAYOUT.rows)
 	_update_hostility()
@@ -245,6 +246,26 @@ func collect_cache(cell: Vector2i) -> void:
 		add_item("hide_coat")
 
 
+func broadcast_offer(cell: Vector2i) -> Dictionary:
+	var distance: Vector2i = (floor.player - cell).abs()
+	if at_camp() or completed or floor.encounter != null or distance.x + distance.y > 1:
+		return {}
+	if floor.terrain_at(cell) != "!" or used_sites.has(cell):
+		return {}
+	return CONTENT.broadcasts[floor_number]
+
+
+func accept_broadcast(cell: Vector2i) -> bool:
+	var offer: Dictionary = broadcast_offer(cell)
+	if offer.is_empty() or seconds_left <= offer.seconds:
+		return false
+	used_sites[cell] = true
+	elapse_floor_time(offer.seconds)
+	for item: String in offer.reward:
+		add_item(item, offer.reward[item])
+	return true
+
+
 func recruit(cell: Vector2i) -> bool:
 	if party.size() >= PARTY_LIMIT or used_sites.has(cell) or floor.terrain_at(cell) != "R":
 		return false
@@ -352,6 +373,7 @@ func escape(exit_cell: Vector2i, choice_id: String = "") -> bool:
 		rook.speed += choice.get("speed", 0)
 		if floor_number == 2:
 			race_id = choice_id
+			rook.natural_armor = choice.get("armor", 0)
 		else:
 			class_id = choice_id
 			rook.skill = CONTENT.skills[choice.skill]
@@ -427,6 +449,9 @@ static func restore(data: Dictionary) -> CampaignRun:
 	if (data.completed and not has_class) or (not data.completed and data.class_id != ""):
 		return null
 	var run := CampaignRun.new(data.seed, data.floor_number)
+	run.race_id = data.race_id
+	var race: Dictionary = CONTENT.races.get(run.race_id, {})
+	run.floor.sight_radius += race.get("sight", 0)
 	var saved_contracts: Dictionary = data.sponsor_contracts
 	for sponsor: Variant in saved_contracts:
 		if not CONTENT.sponsors.has(sponsor) or saved_contracts[sponsor] not in ["active", "fulfilled"]:
@@ -480,7 +505,7 @@ static func restore(data: Dictionary) -> CampaignRun:
 		run.party.append(member)
 	if run.party[0].id != "rook":
 		return null
-	run.race_id = data.race_id
+	run.party[0].natural_armor = race.get("armor", 0)
 	run.class_id = data.class_id
 	if not run.class_id.is_empty():
 		run.party[0].skill = CONTENT.skills[CONTENT.classes[run.class_id].skill]

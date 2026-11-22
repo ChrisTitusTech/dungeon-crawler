@@ -21,10 +21,12 @@ class Fighter:
 	var armor: String
 	var weapon_bonus: int
 	var armor_bonus: int
+	var natural_armor: int
 	var injuries: Dictionary[String, bool] = {}
 	var skill: Dictionary
 	var skill_ready: bool
 	var wound: String
+	var entrance: String
 
 	func _init(fighter_name: String, health: int, attack_power: int, initiative: int) -> void:
 		name = fighter_name
@@ -90,7 +92,7 @@ func _init(members: Array[Fighter], opponent: Fighter, supplies: int) -> void:
 		fighter.skill_ready = not fighter.skill.is_empty()
 	_turn_index = _initiative.size() - 1
 	_finish_action()
-	_log("%s blocks your path." % enemy.name)
+	_log(enemy.entrance if not enemy.entrance.is_empty() else "%s blocks your path." % enemy.name)
 
 
 func current_fighter() -> Fighter:
@@ -198,7 +200,7 @@ func enemy_target() -> Fighter:
 
 
 func _hit(attacker: Fighter, target: Fighter, bonus: int = 0, wound: String = "") -> void:
-	var force: int = maxi(1, attacker.attack_power() + bonus - target.armor_bonus)
+	var force: int = maxi(1, attacker.attack_power() + bonus - target.armor_bonus - target.natural_armor)
 	if target.injuries.has("torso"):
 		force += 2
 	var was_guarding: bool = target.guarding

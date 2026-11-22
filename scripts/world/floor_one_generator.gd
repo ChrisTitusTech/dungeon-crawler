@@ -167,11 +167,14 @@ func _place_encounters() -> void:
 		if index == first_room:
 			_put(center, "R")
 			_put(center + Vector2i(2, -1), "r")
+			_put(center + Vector2i(2, 1), "k")
+			_put(center + Vector2i(-2, 1), "!")
 			continue
 		var count: int = _random.randi_range(0, 2)
 		for enemy: int in count:
 			var cell: Vector2i = center + Vector2i(_random.randi_range(-1, 1), enemy * 2 - 1)
-			_put(cell, "r" if _random.randf() < 0.65 else "g")
+			var roll: float = _random.randf()
+			_put(cell, "r" if roll < 0.5 else ("g" if roll < 0.75 else "k"))
 		if count == 0 or _random.randf() < 0.48:
 			_put(room.position + Vector2i(2, 1), "c")
 

@@ -420,6 +420,75 @@ func test_pet_rescue_needs_a_bandage_and_pet_can_use_its_skill() -> void:
 	assert_true(foe.injuries.has("legs"))
 
 
+func test_broadcast_trade_spends_time_once_and_restores_as_used() -> void:
+	var game: DungeonGame = GAME.instantiate() as DungeonGame
+	game.save_directory = _directory
+	add_child_autofree(game)
+	game._open_run(CampaignRun.new(42, 2))
+	var run: CampaignRun = game._run
+	var site: Vector2i = _find(run.floor, "!")
+	run.floor.restore_checkpoint(site, 1, run.snapshot().enemies, [])
+	run.seconds_left = 90.0
+	game._interact()
+	var choices: VBoxContainer = game._menu.get_node("%Choices")
+	var offer: Button = choices.get_child(0)
+	assert_true(offer.disabled, "A broadcast cannot spend the last seconds on the clock.")
+	assert_false(run.accept_broadcast(site))
+	game._hide_menu()
+	run.seconds_left = 120.0
+	game._interact()
+	offer = choices.get_child(0)
+	assert_false(offer.disabled)
+	offer.pressed.emit()
+	assert_eq(run.seconds_left, 30.0)
+	assert_eq(run.count("silver_box"), 1)
+	assert_false(run.accept_broadcast(site))
+	var restored: CampaignRun = CampaignRun.restore(run.snapshot())
+	assert_not_null(restored)
+	assert_true(restored.broadcast_offer(site).is_empty())
+	await wait_process_frames(1)
+
+
+func test_interacting_with_a_prize_mimic_reveals_a_battle() -> void:
+	var game: DungeonGame = GAME.instantiate() as DungeonGame
+	add_child_autofree(game)
+	game._open_run(CampaignRun.new(42, 2))
+	var run: CampaignRun = game._run
+	var chest: Vector2i = _find(run.floor, "m")
+	var approach: Vector2i = chest + Vector2i.LEFT
+	run.floor.restore_checkpoint(approach, 1, run.snapshot().enemies, [])
+	assert_eq(game._exploration_hint(), "Use to take supplies")
+	game._interact()
+	assert_eq(game._battle.rules.enemy.name, "Prize Mimic")
+	assert_string_contains(game._battle.rules.messages[0], "teeth")
+	game._close_battle(BattleRules.Outcome.WON)
+	assert_null(run.floor.enemy_at(chest))
+	assert_eq(run.count("silver_box"), 1)
+	await wait_process_frames(1)
+
+
+func test_ancestry_traits_apply_on_floor_three_and_after_reload() -> void:
+	for ancestry: String in ["lantern_elf", "drakekin"]:
+		var run := CampaignRun.new(42, 2)
+		var stairs: Vector2i = _find(run.floor, ">")
+		run.floor.player = stairs
+		run.boss_defeated = true
+		assert_true(run.escape(stairs, ancestry))
+		var restored: CampaignRun = CampaignRun.restore(run.snapshot())
+		assert_not_null(restored)
+		if ancestry == "lantern_elf":
+			assert_eq(restored.floor.sight_radius, DungeonFloor.SIGHT_RADIUS + 2)
+			assert_eq(run.floor.sight_radius, restored.floor.sight_radius)
+		else:
+			restored.add_item("hide_coat")
+			var rook: BattleRules.Fighter = restored.party[0]
+			assert_true(restored.equip(rook, "hide_coat"))
+			var foe: BattleRules.Fighter = CampaignRun.CONTENT.make_fighter("spider")
+			var battle := BattleRules.new(restored.party, foe, 0)
+			battle.take_enemy_turn()
+			assert_eq(rook.max_hp - rook.hp, 6, "Scales and worn armor both absorb damage.")
+
+
 func test_truce_changes_enemy_behaviour_and_survives_a_checkpoint() -> void:
 	var run := CampaignRun.new(83)
 	var rat: DungeonFloor.Enemy

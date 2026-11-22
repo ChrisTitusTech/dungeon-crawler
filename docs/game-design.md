@@ -63,7 +63,7 @@ Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dunge
 ## Party and progression
 
 - The main character starts as an unclassed human with basic stats.
-- Rook chooses a race at the end of Floor 2. A Barrow Watch truce unlocks Gloamkin.
+- Rook chooses a race at the end of Floor 2. Lantern Elves see farther, Flint Orcs gain health and attack, Hearth Halflings gain health and speed, and Cinder Drakekin scales absorb damage alongside worn armor. Human and Stonekin remain available. A Barrow Watch truce unlocks Gloamkin.
 - Rook chooses a class at the end of Floor 3. The class roster follows the twelve base classes in the 2024 D&D rules. Every race can choose any class. Each class has a signature skill adapted to this game's turn order, health, and injury rules. The choice is saved with the completed demo. [D&D Free Rules: Character Classes](https://www.dndbeyond.com/sources/dnd/br-2024/character-classes)
 - Recruits and pets join through story beats, faction reputation, or rescue. The roster can exceed 4, with extras waiting in safe rooms.
 - Levels grant stat points; skills level through use.
@@ -80,6 +80,7 @@ Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dunge
 - **System AI:** announcer text for achievements, deaths, floor events, and taunts. It is written content triggered by game events, not generated at runtime.
 - **Achievements and loot boxes:** achievements grant boxes in tiers (bronze through to legendary); boxes open only in safe rooms.
 - **Guild contracts.** Victories unlock offers at the refuge contract board. Each accepted contract pays a one-time reward when the party wins a battle under its terms.
+- **Broadcast terminals.** Each floor has a one-time offer for supplies. Accepting it charges 60, 90, or 120 seconds depending on the floor. An offer is disabled if the charge would empty the clock.
 - **Collapse timer.** Each floor starts with 30 minutes. The timer pauses in the safe room and campaign menus. Warnings trigger at five minutes, two minutes, and 30 seconds. At zero, the party can reload its last checkpoint with the saved time remaining.
 - **Safe rooms:** hand-crafted hubs with save point, bed, shop, crafting stations, box opening, and roster management.
 
@@ -99,6 +100,7 @@ Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dunge
 ## World structure
 
 - 18 floors grouped into themed tiers of three, each tier adding new tilesets, enemies, factions, and one new system or twist.
+- The opening vault has Latchknife Goblins salvaging the rooms between Ashfang and Watch patrols. Bellthread Spiders hunt from farther away in the Bell Galleries, where Amber Slimes absorb damage and Prize Mimics pose as supply chests. The armored Tithe Ossuary inhabits the keep on Floor 3, where Gutter Gargoyles stand guard.
 - Per floor: procedural layout stitched around hand-crafted rooms (safe rooms, boss arena, story rooms). A seed per floor is stored in the save, so a reload restores the same floor.
 - Early Access ships the first tiers; later tiers arrive in updates.
 

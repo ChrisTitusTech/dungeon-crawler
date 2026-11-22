@@ -13,6 +13,12 @@ heroes = {
 foes = {
 "rat": {"name": "Ashfang Dire Rat", "hp": 17, "power": 5, "speed": 8, "portrait": 2, "xp": 7, "drop": "tonic", "faction": "ashfang", "material": "ashfang_pelt"},
 "guard": {"name": "Barrow Sentinel", "hp": 32, "power": 9, "speed": 12, "portrait": 3, "xp": 15, "drop": "bandage", "wound": "arms", "faction": "watch", "material": "iron_scrap"},
+"goblin": {"name": "Latchknife Goblin", "hp": 21, "power": 6, "speed": 14, "portrait": 3, "xp": 9, "drop": "bandage", "faction": "scrappers", "material": "iron_scrap", "entrance": "A Latchknife Goblin snaps its scrap shears."},
+"slime": {"name": "Amber Slime", "hp": 38, "power": 8, "speed": 5, "armor": 2, "xp": 14, "drop": "tonic", "wound": "arms", "faction": "ashfang", "material": "bitterroot", "entrance": "Amber Slime oozes forward. Its thick rind blunts hits."},
+"spider": {"name": "Bellthread Spider", "hp": 29, "power": 10, "speed": 16, "xp": 15, "drop": "bandage", "wound": "legs", "faction": "ashfang", "material": "ashfang_pelt", "entrance": "The Bellthread Spider spins for your ankles."},
+"skeleton": {"name": "Ledger Skeleton", "hp": 43, "power": 11, "speed": 10, "armor": 2, "xp": 19, "drop": "tonic", "wound": "torso", "faction": "ossuary", "material": "iron_scrap", "entrance": "A Ledger Skeleton rattles the coins inside its ribs."},
+"mimic": {"name": "Prize Mimic", "hp": 46, "power": 12, "speed": 10, "xp": 22, "drop": "silver_box", "wound": "arms", "faction": "scrappers", "material": "iron_scrap", "entrance": "The prize chest opens first. It has teeth."},
+"gargoyle": {"name": "Gutter Gargoyle", "hp": 54, "power": 12, "speed": 7, "armor": 3, "xp": 23, "drop": "bandage", "wound": "head", "faction": "ossuary", "material": "iron_scrap", "entrance": "The Gutter Gargoyle unfolds from its stone perch."},
 "warden": {"name": "Sir Aldren", "hp": 96, "power": 15, "speed": 15, "portrait": 5, "xp": 35, "drop": "warden_blade", "wound": "torso", "faction": "watch", "material": "iron_scrap"},
 "marshal": {"name": "Marshal Ysra", "hp": 118, "power": 17, "speed": 14, "portrait": 5, "xp": 45, "drop": "marshal_mail", "wound": "arms", "faction": "watch", "material": "iron_scrap"},
 "regent": {"name": "Lord Veyr", "hp": 142, "power": 19, "speed": 17, "portrait": 5, "xp": 55, "drop": "silver_box", "wound": "legs", "faction": "watch", "material": "iron_scrap"}
@@ -52,7 +58,16 @@ skills = {
 races = {
 "human": {"name": "Human", "summary": "+2 base attack", "power": 2},
 "stonekin": {"name": "Stonekin", "summary": "+8 max HP", "hp": 8},
+"lantern_elf": {"name": "Lantern Elf", "summary": "+2 tiles of sight", "sight": 2},
+"flint_orc": {"name": "Flint Orc", "summary": "+5 max HP, +1 attack", "hp": 5, "power": 1},
+"hearth_halfling": {"name": "Hearth Halfling", "summary": "+4 max HP, +2 speed", "hp": 4, "speed": 2},
+"drakekin": {"name": "Cinder Drakekin", "summary": "Scales block 2 damage", "armor": 2},
 "gloamkin": {"name": "Gloamkin", "summary": "+3 base speed", "speed": 3, "requires": "truce", "unlock": "Hold a Barrow Watch truce"}
+}
+broadcasts = {
+1: {"name": "The Warm-Up Slot", "line": "Our crew put bandages in the first-aid kit. Imagine our surprise. Give us one minute of airtime and it is yours.", "seconds": 60, "reward": {"bandage": 2, "tonic": 2}, "prize": "2 bandages, 2 tonics"},
+2: {"name": "The Gallery Giveaway", "line": "Hold your pose for the sponsor portrait. Camera two will get your good side. Camera three will get the wound.", "seconds": 90, "reward": {"silver_box": 1, "bandage": 1}, "prize": "Silver box, bandage"},
+3: {"name": "The Last Commercial", "line": "The network has graciously airlifted supplies from contestants who no longer need them. Please look grateful.", "seconds": 120, "reward": {"tonic": 4, "bandage": 2}, "prize": "4 tonics, 2 bandages"}
 }
 classes = {
 "barbarian": {"name": "Barbarian", "summary": "+8 HP · Strike and guard", "hp": 8, "skill": "fury_break"},
@@ -70,8 +85,8 @@ classes = {
 }
 show = {
 "intro": {"line": "Sir Aldren, the Hollow Castellan, guards the stairs. Challenge him before the vault collapses."},
-"intro_2": {"line": "Marshal Ysra, the Iron Steward, holds the galleries. The clock starts again when you leave refuge."},
-"intro_3": {"line": "Lord Veyr, the Last Regent, guards the keep. He's been expecting a better party."},
+"intro_2": {"line": "Welcome to the Bell Galleries. Marshal Ysra holds the stairs. A chest that opens on its own is not a gift."},
+"intro_3": {"line": "Welcome to the Tithe Keep. The dead have balanced the books. Lord Veyr is waiting to collect."},
 "first_blood": {"line": "First blood. Your bronze box is waiting back at camp.", "achievement": "First Blood", "box": "bronze_box"},
 "three_wins": {"line": "Three wins. The odds are getting awkward. Have a silver box.", "achievement": "Three for the Show", "box": "silver_box"},
 "recruit": {"line": "Sable joins your party. Apparently the waiver is transferable.", "achievement": "One More Seat", "box": "bronze_box"},
@@ -90,7 +105,9 @@ show = {
 }
 factions = {
 "ashfang": {"name": "Ashfang Brood", "initial": -65, "rival": "watch"},
-"watch": {"name": "Barrow Watch", "initial": -18, "rival": "ashfang", "truce": 0, "gift": "bandage", "gift_cost": 2, "gift_standing": 18}
+"watch": {"name": "Barrow Watch", "initial": -18, "rival": "ashfang", "truce": 0, "gift": "bandage", "gift_cost": 2, "gift_standing": 18},
+"scrappers": {"name": "Latchknife Crew", "initial": -24, "rival": "ossuary"},
+"ossuary": {"name": "Tithe Ossuary", "initial": -42, "rival": "scrappers"}
 }
 recipes = {
 "field_dressing": {"item": "bandage", "count": 2, "ingredients": {"ashfang_pelt": 2}},

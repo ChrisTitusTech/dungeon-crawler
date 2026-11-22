@@ -11,6 +11,7 @@ const REMEMBERED := Color(0.46, 0.49, 0.58)
 const PARTY_MARK := Color(0.47, 0.88, 0.78, 0.72)
 const ENEMY_MARK := Color(0.98, 0.55, 0.43, 0.7)
 const STEP_TIME := 0.13
+const FLOOR_TINTS := [Color.WHITE, Color("#b9a3cf"), Color("#9ebbc7")]
 
 @onready var _tiles: TileMapLayer = $Tiles
 @onready var _camera: Camera2D = $Camera
@@ -28,6 +29,7 @@ var _visible_cells: Dictionary[Vector2i, bool] = {}
 var _step_progress: float = 1.0
 var _moving: bool
 var _ambient_time: float
+var _floor_tint := Color.WHITE
 var _ambient_frame: int
 
 
@@ -35,6 +37,8 @@ func load_floor(floor_state: DungeonFloor, party: Array[BattleRules.Fighter], ca
 	_floor = floor_state
 	_party = party
 	_campaign = campaign
+	_floor_tint = Color.WHITE if campaign == null or campaign.at_camp() else FLOOR_TINTS[campaign.floor_number - 1]
+	_tiles.modulate = _floor_tint
 	_moving = false
 	_player_cell = floor_state.player
 	_enemy_cells.clear()
@@ -159,7 +163,7 @@ func _draw_cell(cell: Vector2i) -> void:
 	if _floor.is_wall(cell):
 		var tint: Color = Color.WHITE if is_visible else REMEMBERED
 		var region: Rect2 = _wall_region(cell)
-		draw_texture_rect_region(STONE, Rect2(center - WALL_OFFSET, region.size), region, tint)
+		draw_texture_rect_region(STONE, Rect2(center - WALL_OFFSET, region.size), region, tint * _floor_tint)
 		if terrain == "t" and is_visible:
 			_draw_torch(center - Vector2(0, 8))
 		return
@@ -193,9 +197,15 @@ func _draw_enemy(enemy: DungeonFloor.Enemy) -> void:
 	var center: Vector2 = _project_step(origin, enemy.cell)
 	var was_visible: bool = _previous_visibility.has(origin)
 	var opacity: float = lerpf(float(was_visible), float(_visible_cells.has(enemy.cell)), _step_progress)
+	if enemy.kind == DungeonFloor.EnemyKind.MIMIC:
+		_draw_chest(center)
+		return
 	var accent: Color = ENEMY_MARK if enemy.hostile else PARTY_MARK
 	accent.a *= opacity
 	_draw_outline(center, Vector2(12, 6), accent)
+	if PrototypeArt.has_monster_shape(enemy.kind):
+		PrototypeArt.draw_monster(self, enemy.kind, center + Vector2(0, 4), 32.0, Color(1, 1, 1, opacity))
+		return
 	_draw_actor(center + Vector2(0, 4), PrototypeArt.enemy_icon(enemy.kind),
 		48.0 if enemy.kind == DungeonFloor.EnemyKind.BOSS else 35.0,
 		_stride(origin != enemy.cell), opacity)
@@ -245,6 +255,10 @@ func _draw_landmark(cell: Vector2i, center: Vector2, terrain: String) -> void:
 		elif terrain == "P":
 			_draw_outline(center, Vector2(10, 5), PARTY_MARK)
 			_draw_actor(center + Vector2(0, 3), PrototypeArt.RAT, 24.0)
+		elif terrain == "!":
+			_draw_outline(center, Vector2(10, 5), Color("#b39df4"))
+			draw_rect(Rect2(center + Vector2(-5, -12), Vector2(10, 9)), Color("#514071"))
+			draw_rect(Rect2(center + Vector2(-3, -10), Vector2(6, 4)), Color("#b39df4"))
 
 
 func _draw_refuge_door(center: Vector2) -> void:

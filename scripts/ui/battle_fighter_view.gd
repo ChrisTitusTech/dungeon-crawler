@@ -22,6 +22,7 @@ var _pose_tween: Tween
 var _health_tween: Tween
 var _health_ready: bool
 var _flash: Tween
+var _monster_kind: DungeonFloor.EnemyKind
 
 
 func show_fighter(fighter: BattleRules.Fighter, is_active: bool, accent: Color) -> void:
@@ -67,12 +68,19 @@ func set_portrait(index: int, opposing: bool, sprite_size: float) -> void:
 	_elapsed = index * 0.7
 
 
+func set_monster_shape(kind: DungeonFloor.EnemyKind) -> void:
+	_monster_kind = kind
+	_portrait.hide()
+
+
 func _process(delta: float) -> void:
 	if not is_visible_in_tree() or DisplayServer.get_name() == "headless":
 		return
 	_elapsed += delta
 	var bob: float = sin(_elapsed * 4.3) * 0.85 if _alive else 0.0
 	_portrait.position = _portrait_origin + _pose_offset + Vector2(0.0, bob)
+	if PrototypeArt.has_monster_shape(_monster_kind):
+		queue_redraw()
 
 
 func _draw() -> void:
@@ -80,6 +88,10 @@ func _draw() -> void:
 	draw_circle(Vector2.ZERO, _sprite_size * 0.33, Color(0.025, 0.032, 0.047, 0.5), true, -1.0, true)
 	if _active:
 		draw_arc(Vector2.ZERO, _sprite_size * 0.31, 0.0, TAU, 36, _accent, 1.4, true)
+	draw_set_transform(Vector2.ZERO)
+	if PrototypeArt.has_monster_shape(_monster_kind):
+		PrototypeArt.draw_monster(self, _monster_kind, _pose_offset, _sprite_size,
+			_portrait.modulate * _portrait.self_modulate)
 
 
 func perform(command: BattleRules.Command) -> void:

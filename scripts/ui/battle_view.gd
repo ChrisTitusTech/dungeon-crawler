@@ -61,6 +61,8 @@ func start(battle: BattleRules, enemy_kind: DungeonFloor.EnemyKind, uses_checkpo
 		_party_cards.append(card)
 	var enemy_size := 130.0 if enemy_kind == DungeonFloor.EnemyKind.BOSS else 100.0
 	_enemy_card = _add_card(PrototypeArt.enemy_icon(enemy_kind), ENEMY_SLOT, enemy_size, true)
+	if PrototypeArt.has_monster_shape(enemy_kind):
+		_enemy_card.set_monster_shape(enemy_kind)
 	_render()
 
 

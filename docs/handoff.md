@@ -29,7 +29,7 @@ Save in the safe room and close the game on both PCs before copying files. Back 
 | Windows | `%APPDATA%\Godot\app_userdata\Dungeon Crawler\` |
 | Linux | `${XDG_DATA_HOME:-$HOME/.local/share}/godot/app_userdata/Dungeon Crawler/` |
 
-The files live outside the Git checkout. Checkpoints preserve the current floor, time remaining, party, and advancement choices. Saves made before the twelve-class roster are incompatible. Use **Replace slot** to start fresh.
+The files live outside the Git checkout. Checkpoints preserve the current floor, time remaining, party, and advancement choices. Saves made before the expanded encounters and broadcast terminals are incompatible. Use **Replace slot** to start fresh.
 
 ## Resume Milestone 3
 

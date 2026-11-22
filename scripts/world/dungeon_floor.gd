@@ -1,7 +1,7 @@
 class_name DungeonFloor
 extends RefCounted
 
-enum EnemyKind { RAT, GUARD, BOSS }
+enum EnemyKind { RAT, GUARD, BOSS, GOBLIN, SLIME, SPIDER, SKELETON, MIMIC, GARGOYLE }
 
 class Enemy:
 	var kind: EnemyKind
@@ -19,6 +19,11 @@ class Enemy:
 
 const SIGHT_RADIUS := 7
 const CHASE_RADIUS := 6
+const SPAWNS: Dictionary[String, EnemyKind] = {
+	"r": EnemyKind.RAT, "g": EnemyKind.GUARD, "b": EnemyKind.BOSS,
+	"k": EnemyKind.GOBLIN, "o": EnemyKind.SLIME, "s": EnemyKind.SPIDER,
+	"u": EnemyKind.SKELETON, "m": EnemyKind.MIMIC, "v": EnemyKind.GARGOYLE,
+}
 const CARDINALS: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]
 const FIXTURES := ["B", "F", "L", "G", "W", "A"]
 
@@ -26,6 +31,7 @@ var size: Vector2i
 var player: Vector2i
 var turn: int = 0
 var safe_room: Rect2i
+var sight_radius := SIGHT_RADIUS
 var enemies: Array[Enemy] = []
 var encounter: Enemy
 var visible: Dictionary[Vector2i, bool] = {}
@@ -35,18 +41,19 @@ var _rows: PackedStringArray
 var _reprieved_enemy: Enemy
 
 
-func _init(rows: PackedStringArray, sanctuary: Rect2i = Rect2i()) -> void:
+func _init(rows: PackedStringArray, sanctuary: Rect2i = Rect2i(), vision: int = SIGHT_RADIUS) -> void:
 	_rows = rows
 	safe_room = sanctuary
+	sight_radius = vision
 	size = Vector2i(rows[0].length(), rows.size())
 	for y: int in size.y:
 		for x: int in size.x:
 			var cell := Vector2i(x, y)
-			match rows[y][x]:
-				"S": player = cell
-				"r": enemies.append(Enemy.new(EnemyKind.RAT, cell))
-				"g": enemies.append(Enemy.new(EnemyKind.GUARD, cell))
-				"b": enemies.append(Enemy.new(EnemyKind.BOSS, cell))
+			var glyph: String = rows[y][x]
+			if glyph == "S":
+				player = cell
+			elif SPAWNS.has(glyph):
+				enemies.append(Enemy.new(SPAWNS[glyph], cell))
 
 	for enemy: Enemy in enemies:
 		for direction: Vector2i in CARDINALS:
@@ -126,11 +133,12 @@ func restore_checkpoint(position: Vector2i, steps: int, positions: Dictionary, v
 
 func _advance_enemies() -> void:
 	for enemy: Enemy in enemies:
-		if enemy == _reprieved_enemy or enemy.kind == EnemyKind.BOSS:
+		if enemy == _reprieved_enemy or enemy.kind in [EnemyKind.BOSS, EnemyKind.MIMIC, EnemyKind.GARGOYLE]:
 			continue
 
 		var goal: Vector2i = enemy.patrol_end if enemy.cell == enemy.home else enemy.home
-		if enemy.hostile and not safe_room.has_point(player) and enemy.cell.distance_squared_to(player) <= CHASE_RADIUS * CHASE_RADIUS:
+		var radius: int = 9 if enemy.kind == EnemyKind.SPIDER else CHASE_RADIUS
+		if enemy.hostile and not safe_room.has_point(player) and enemy.cell.distance_squared_to(player) <= radius * radius:
 			if _has_line_of_sight(enemy.cell, player):
 				goal = player
 
@@ -157,10 +165,10 @@ func _step_toward(origin: Vector2i, goal: Vector2i, hostile: bool) -> Vector2i:
 
 func _update_visibility() -> void:
 	visible.clear()
-	for y: int in range(maxi(0, player.y - SIGHT_RADIUS), mini(size.y, player.y + SIGHT_RADIUS + 1)):
-		for x: int in range(maxi(0, player.x - SIGHT_RADIUS), mini(size.x, player.x + SIGHT_RADIUS + 1)):
+	for y: int in range(maxi(0, player.y - sight_radius), mini(size.y, player.y + sight_radius + 1)):
+		for x: int in range(maxi(0, player.x - sight_radius), mini(size.x, player.x + sight_radius + 1)):
 			var cell := Vector2i(x, y)
-			if player.distance_squared_to(cell) <= SIGHT_RADIUS * SIGHT_RADIUS:
+			if player.distance_squared_to(cell) <= sight_radius * sight_radius:
 				if _has_line_of_sight(player, cell):
 					visible[cell] = true
 					explored[cell] = true

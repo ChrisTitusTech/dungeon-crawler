@@ -1,7 +1,7 @@
 class_name CampaignSave
 extends RefCounted
 
-const VERSION := 4
+const VERSION := 5
 const SLOT_COUNT := 3
 
 

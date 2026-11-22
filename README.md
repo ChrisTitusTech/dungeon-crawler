@@ -32,7 +32,9 @@ Party HP, injuries, and equipment carry between fights. The pack lets you use to
 
 After defeating each boss, use the stairs. Floors 2 and 3 start at a safe-room checkpoint with a fresh 30-minute countdown. Choose Rook's race at the Floor 2 stairs. A Watch truce unlocks an extra race. At the Floor 3 stairs, choose any of the twelve base classes. Each has its own combat skill. Choosing the class finishes the run.
 
-The updated class roster uses a new checkpoint format. Choose **Replace slot** to start a new run in a slot occupied by an older save.
+The vault has goblin salvage crews. The Bell Galleries have deep amber slimes, long-ranging spiders, and some very hungry prize chests. The Tithe Keep is guarded by armored skeletons and stone gargoyles. Each floor has a broadcast terminal that trades supplies for time on the collapse clock.
+
+The expanded floors use a new checkpoint format. Choose **Replace slot** to start a new run in a slot occupied by an older save.
 
 | Action | Keyboard | Gamepad | Mouse |
 | --- | --- | --- | --- |

@@ -428,10 +428,10 @@ func _interaction_cell() -> Vector2i:
 			continue
 		if terrain in [">", "D"] or _run.fallen_gear.has(cell):
 			return cell
-		if terrain in ["c", "R", "P"] and not _run.used_sites.has(cell):
+		if terrain in ["c", "R", "P", "!"] and not _run.used_sites.has(cell):
 			return cell
 		var enemy: DungeonFloor.Enemy = _floor.enemy_at(cell)
-		if enemy != null and not enemy.hostile:
+		if enemy != null and (not enemy.hostile or enemy.kind == DungeonFloor.EnemyKind.MIMIC):
 			return cell
 	return NO_SITE
 
@@ -466,6 +466,15 @@ func _interact() -> void:
 					_refresh_exploration("Sable joined the party.")
 			"P":
 				_rescue_pet(cell)
+			"!":
+				_show_broadcast(cell)
+				return
+			"m":
+				var mimic: DungeonFloor.Enemy = _floor.enemy_at(cell)
+				if mimic != null:
+					_floor.encounter = mimic
+					_open_battle(mimic.kind)
+				return
 			">":
 				_use_stairs(cell)
 				return
@@ -475,6 +484,26 @@ func _interact() -> void:
 					_present("Barrow Sentinel", "The sentinel lowers their spear in recognition of the truce.",
 						[CampaignMenu.choice("Continue", _hide_menu)])
 	_dungeon.refresh()
+
+
+func _show_broadcast(cell: Vector2i) -> void:
+	var offer: Dictionary = _run.broadcast_offer(cell)
+	if offer.is_empty():
+		return
+	var cost: String = "Trade %d seconds · %s" % [offer.seconds, offer.prize]
+	if _run.seconds_left <= offer.seconds:
+		cost = "Need more than %d seconds" % offer.seconds
+	_present(offer.name, offer.line, [
+		CampaignMenu.choice(cost, _accept_broadcast.bind(cell), _run.seconds_left <= offer.seconds),
+		CampaignMenu.choice("Leave the terminal", _hide_menu),
+	])
+
+
+func _accept_broadcast(cell: Vector2i) -> void:
+	if _run.accept_broadcast(cell):
+		_hide_menu()
+		_dungeon.refresh()
+		_refresh_exploration("Sponsor supplies added to the pack.")
 
 
 func _rescue_pet(cell: Vector2i) -> void:
@@ -535,6 +564,10 @@ func _exploration_hint() -> String:
 		"W": return "Use the workbench to craft supplies"
 		"A": return "Use the board to review guild contracts"
 		"c": return "Use to take supplies"
+		"m":
+			if _floor.enemy_at(site) != null:
+				return "Use to take supplies"
+		"!": return "Use to hear the sponsor's offer"
 		"R": return "Use to talk to Sable"
 		"P": return "Use a bandage to rescue Cinder"
 		">": return "Use to descend" if _run.boss_defeated else "%s holds the stairs" % _run.boss_name()
