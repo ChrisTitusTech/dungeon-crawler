@@ -7,7 +7,8 @@ script = ExtResource("1_content")
 heroes = {
 "rook": {"name": "Rook", "hp": 28, "power": 7, "speed": 9, "portrait": 0, "skill": "cleave"},
 "mira": {"name": "Mira", "hp": 22, "power": 6, "speed": 13, "portrait": 1, "skill": "trip"},
-"sable": {"name": "Sable", "hp": 25, "power": 6, "speed": 11, "portrait": 4, "skill": "brace"}
+"sable": {"name": "Sable", "hp": 25, "power": 6, "speed": 11, "portrait": 4, "skill": "brace"},
+"cinder": {"name": "Cinder", "hp": 24, "power": 8, "speed": 14, "portrait": 2, "skill": "ankle_bite", "pet": true}
 }
 foes = {
 "rat": {"name": "Ashfang Dire Rat", "hp": 17, "power": 5, "speed": 8, "portrait": 2, "xp": 7, "drop": "tonic", "faction": "ashfang", "material": "ashfang_pelt"},
@@ -33,7 +34,21 @@ items = {
 skills = {
 "cleave": {"name": "Cleave", "bonus": 5, "wound": "arms"},
 "trip": {"name": "Hamstring", "bonus": 3, "wound": "legs"},
-"brace": {"name": "Breaking strike", "bonus": 4, "wound": "head"}
+"brace": {"name": "Breaking strike", "bonus": 4, "wound": "head"},
+"ankle_bite": {"name": "Ankle Bite", "bonus": 2, "wound": "legs"},
+"shield_break": {"name": "Shield Break", "bonus": 7, "wound": "arms"},
+"low_feint": {"name": "Low Feint", "bonus": 6, "wound": "legs"},
+"seal_cutter": {"name": "Seal Cutter", "bonus": 5, "wound": "torso"}
+}
+races = {
+"human": {"name": "Human", "summary": "+2 base attack", "power": 2},
+"stonekin": {"name": "Stonekin", "summary": "+8 max HP", "hp": 8},
+"gloamkin": {"name": "Gloamkin", "summary": "+3 base speed", "speed": 3, "requires": "truce", "unlock": "Hold a Barrow Watch truce"}
+}
+classes = {
+"vanguard": {"name": "Vanguard", "summary": "+2 base attack, Shield Break wounds arms", "power": 2, "skill": "shield_break"},
+"skirmisher": {"name": "Skirmisher", "summary": "+2 base speed, Low Feint wounds legs", "speed": 2, "skill": "low_feint"},
+"guildblade": {"name": "Guildblade", "summary": "+4 max HP, Seal Cutter wounds the torso", "hp": 4, "skill": "seal_cutter", "requires": "contract", "unlock": "Fulfill a guild contract"}
 }
 show = {
 "intro": {"line": "Sir Aldren, the Hollow Castellan, guards the stairs. Challenge him before the vault collapses."},
@@ -42,6 +57,7 @@ show = {
 "first_blood": {"line": "First blood. Your bronze box is waiting back at camp.", "achievement": "First Blood", "box": "bronze_box"},
 "three_wins": {"line": "Three wins. The odds are getting awkward. Have a silver box.", "achievement": "Three for the Show", "box": "silver_box"},
 "recruit": {"line": "Sable joins your party. Apparently the waiver is transferable.", "achievement": "One More Seat", "box": "bronze_box"},
+"rescue_pet": {"line": "The rat has adopted you. I recommend reading the small print.", "achievement": "A Friend in the Dark"},
 "warden": {"line": "Sir Aldren has fallen. Take the stairs before the vault buries you both."},
 "marshal": {"line": "Marshal Ysra has fallen. Her galleries are closing. Take the stairs."},
 "regent": {"line": "Lord Veyr has fallen. Use the stairs before the keep comes down."},

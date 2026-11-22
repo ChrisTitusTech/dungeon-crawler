@@ -28,9 +28,11 @@ Entering the safe room saves a checkpoint. Use the chest to save again or open r
 
 At the workbench, turn pelts, iron scrap, and bitterroot into supplies or a Tempered Longsword. Hunting Ashfang beasts or offering bandages to the Watch envoy can earn a truce with Barrow Sentinels. Visit the refuge contract board to see guild offers and their battle conditions. The two Floor 1 contracts unlock after two and five victories.
 
-Party HP, injuries, and equipment carry between fights. The pack lets you use tonics, treat wounds, and equip loot. Spend earned stat points from the Party menu. Each fighter gets one use of their skill per battle. Recruit Sable before leaving Floor 1. After defeating each boss, use the stairs. Floors 2 and 3 start at a safe-room checkpoint with a fresh 30-minute countdown. The stairs on Floor 3 finish the run.
+Party HP, injuries, and equipment carry between fights. The pack lets you use tonics, treat wounds, and equip loot. Spend earned stat points from the Party menu. Each fighter gets one use of their skill per battle. Recruit Sable before leaving Floor 1. Look for Cinder, a wounded Ashfang rat, in the upper gallery on Floor 2. Rescue Cinder with a bandage and an open party slot.
 
-The three-floor campaign uses a new checkpoint format. Choose **Replace slot** to start a new run in a slot occupied by an older save.
+After defeating each boss, use the stairs. Floors 2 and 3 start at a safe-room checkpoint with a fresh 30-minute countdown. Choose Rook's race at the Floor 2 stairs and class at the Floor 3 stairs. A Watch truce unlocks an extra race, and a fulfilled guild contract unlocks an extra class. Choosing the class finishes the run.
+
+The race and class update uses a new checkpoint format. Choose **Replace slot** to start a new run in a slot occupied by an older save.
 
 | Action | Keyboard | Gamepad | Mouse |
 | --- | --- | --- | --- |

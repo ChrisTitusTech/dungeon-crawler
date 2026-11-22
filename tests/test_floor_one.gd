@@ -297,6 +297,16 @@ func test_stairs_save_the_next_floor_and_the_final_clear() -> void:
 	var boss_names: Array[String] = ["Sir Aldren", "Marshal Ysra", "Lord Veyr"]
 	for number: int in range(1, 4):
 		var run: CampaignRun = game._run
+		if number == 2:
+			var pet_site: Vector2i = _find(run.floor, "P")
+			run.floor.restore_checkpoint(pet_site, 4, run.snapshot().enemies, [])
+			var bandages: int = run.count("bandage")
+			game._interact()
+			assert_eq(run.count("bandage"), bandages - 1)
+			assert_eq(run.party.back().id, "cinder")
+			assert_true(run.party.back().is_pet)
+			game._interact()
+			assert_eq(run.count("bandage"), bandages - 1)
 		var stairs: Vector2i = _find(run.floor, ">")
 		var boss: DungeonFloor.Enemy = run.floor.enemy_at(_find(run.floor, "b"))
 		run.seconds_left = 23.5
@@ -311,6 +321,19 @@ func test_stairs_save_the_next_floor_and_the_final_clear() -> void:
 		var pack: Dictionary = run.inventory.duplicate()
 		var standing: Dictionary = run.reputation.duplicate()
 		game._interact()
+		if number == 2:
+			assert_eq(heading.text, "Choose Rook's race")
+			assert_eq(CampaignSave.read(_directory, 1).floor_number, 2)
+			var stonekin: Button = choices.get_child(1)
+			stonekin.pressed.emit()
+			party[0].max_hp += 8
+			party[0].hp += 8
+		elif number == 3:
+			assert_eq(heading.text, "Choose Rook's class")
+			assert_false(run.completed)
+			var guildblade: Button = choices.get_child(2)
+			assert_false(guildblade.disabled)
+			guildblade.pressed.emit()
 		var saved: Dictionary = CampaignSave.read(_directory, 1)
 		if number < CampaignRun.LAST_FLOOR:
 			assert_eq(saved.floor_number, number + 1)
@@ -327,6 +350,11 @@ func test_stairs_save_the_next_floor_and_the_final_clear() -> void:
 			game._load_slot(1)
 			assert_eq(game._run.floor_number, number + 1)
 			assert_true(game._run.at_camp())
+			if number == 2:
+				assert_eq(game._run.race_id, "stonekin")
+				assert_eq(game._party[0].max_hp, party[0].max_hp)
+				assert_true(game._party.back().is_pet)
+				assert_eq(game._party.back().skill.name, "Ankle Bite")
 			game._interact()
 			assert_same(game._floor, game._run.floor)
 			assert_eq(game._title.text, "Floor %d" % (number + 1))
@@ -343,7 +371,49 @@ func test_stairs_save_the_next_floor_and_the_final_clear() -> void:
 			assert_eq(heading.text, "Floor 3 cleared")
 			assert_eq(game._run.seconds_left, 23.5)
 			assert_has(game._run.achievements, "Past the Regent")
+			assert_eq(game._run.class_id, "guildblade")
+			assert_eq(game._party[0].skill.name, "Seal Cutter")
+			assert_eq(game._party[0].max_hp, party[0].max_hp + 4)
 	await wait_process_frames(1)
+
+
+func test_locked_advancement_and_fallen_rook() -> void:
+	var run := CampaignRun.new(42, 2)
+	var stairs: Vector2i = _find(run.floor, ">")
+	run.floor.player = stairs
+	assert_false(run.escape(stairs, "stonekin"), "The boss still holds the stairs.")
+	run.boss_defeated = true
+	assert_false(run.escape(stairs, "gloamkin"), "Gloamkin requires an active truce.")
+	assert_false(run.escape(stairs), "A choice is required.")
+	run.party[0].hp = 0
+	assert_true(run.escape(stairs, "stonekin"))
+	assert_eq(run.party[0].hp, 0, "A race choice never revives Rook.")
+	run.leave_refuge()
+	stairs = _find(run.floor, ">")
+	run.floor.player = stairs
+	run.boss_defeated = true
+	assert_false(run.escape(stairs, "guildblade"), "Guildblade requires a fulfilled contract.")
+	assert_true(run.escape(stairs, "vanguard"))
+	assert_false(run.escape(stairs, "vanguard"), "Class bonuses apply only once.")
+
+
+func test_pet_rescue_needs_a_bandage_and_pet_can_use_its_skill() -> void:
+	var run := CampaignRun.new(42, 2)
+	var pet_site: Vector2i = _find(run.floor, "P")
+	assert_false(run.rescue_pet(pet_site), "Cinder is out of reach.")
+	run.floor.player = pet_site
+	run.spend_item("bandage", run.count("bandage"))
+	assert_false(run.rescue_pet(pet_site))
+	run.add_item("bandage")
+	assert_true(run.rescue_pet(pet_site))
+	run.add_item("iron_blade")
+	var pet: BattleRules.Fighter = run.party.back()
+	assert_false(run.equip(pet, "iron_blade"))
+	var foe: BattleRules.Fighter = CampaignRun.CONTENT.make_fighter("rat")
+	var battle := BattleRules.new(run.party, foe, 0)
+	assert_same(battle.current_fighter(), pet)
+	assert_true(battle.use_command(BattleRules.Command.SKILL))
+	assert_true(foe.injuries.has("legs"))
 
 
 func test_truce_changes_enemy_behaviour_and_survives_a_checkpoint() -> void:

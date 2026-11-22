@@ -407,7 +407,7 @@ func _interaction_cell() -> Vector2i:
 			continue
 		if terrain in [">", "D"] or _run.fallen_gear.has(cell):
 			return cell
-		if terrain in ["c", "R"] and not _run.used_sites.has(cell):
+		if terrain in ["c", "R", "P"] and not _run.used_sites.has(cell):
 			return cell
 		var enemy: DungeonFloor.Enemy = _floor.enemy_at(cell)
 		if enemy != null and not enemy.hostile:
@@ -443,21 +443,61 @@ func _interact() -> void:
 			"R":
 				if _run.recruit(cell):
 					_refresh_exploration("Sable joined the party.")
+			"P":
+				_rescue_pet(cell)
 			">":
-				if _run.escape(cell):
-					if _run.completed:
-						_show_summary(_save())
-					else:
-						_show_arrival()
-					return
-				else:
-					_refresh_exploration("Defeat %s first." % _run.boss_name())
+				_use_stairs(cell)
+				return
 			_:
 				var envoy: DungeonFloor.Enemy = _floor.enemy_at(cell)
 				if envoy != null and not envoy.hostile:
 					_present("Barrow Sentinel", "The sentinel lowers their spear in recognition of the truce.",
 						[CampaignMenu.choice("Continue", _hide_menu)])
 	_dungeon.refresh()
+
+
+func _rescue_pet(cell: Vector2i) -> void:
+	var notice: String
+	if _run.party.size() >= CampaignRun.PARTY_LIMIT:
+		notice = "Cinder needs an open party slot."
+	elif _run.count("bandage") == 0:
+		notice = "Cinder needs a bandage."
+	elif _run.rescue_pet(cell):
+		notice = "Cinder joined the party."
+	else:
+		return
+	_refresh_exploration(notice)
+
+
+func _use_stairs(cell: Vector2i) -> void:
+	if not _run.can_escape(cell):
+		_refresh_exploration("Defeat %s first." % _run.boss_name())
+		return
+	var options: Dictionary = _run.advancement_choices()
+	if options.is_empty():
+		_finish_stairs(cell)
+		return
+	var choices: Array[Dictionary] = []
+	for id: String in options:
+		var option: Dictionary = options[id]
+		var unlocked: bool = _run.advancement_unlocked(option)
+		var description: String = option.summary if unlocked else option.unlock
+		choices.append(CampaignMenu.choice("%s · %s" % [option.name, description],
+			_finish_stairs.bind(cell, id), not unlocked))
+	choices.append(CampaignMenu.choice("Return to dungeon", _hide_menu))
+	if _run.floor_number == 2:
+		_present("Choose Rook's race", "The choice is permanent. Select a race to descend to Floor 3.", choices)
+	else:
+		_present("Choose Rook's class", "The choice is permanent. Select a class to finish the run.", choices)
+
+
+func _finish_stairs(cell: Vector2i, choice_id: String = "") -> void:
+	if not _run.escape(cell, choice_id):
+		return
+	if _run.completed:
+		_show_summary(_save())
+	else:
+		_show_arrival()
 
 
 func _exploration_hint() -> String:
@@ -475,6 +515,7 @@ func _exploration_hint() -> String:
 		"A": return "Use the board to review guild contracts"
 		"c": return "Use to take supplies"
 		"R": return "Use to talk to Sable"
+		"P": return "Use a bandage to rescue Cinder"
 		">": return "Use to descend" if _run.boss_defeated else "%s holds the stairs" % _run.boss_name()
 	if _run.at_camp():
 		return "Beds · table · chest · workbench · envoy · contract board"
@@ -638,6 +679,8 @@ func _choose_item_target(item: String) -> void:
 			disabled = disabled or member.hp >= member.max_hp
 		elif item == "bandage":
 			disabled = disabled or member.injuries.is_empty()
+		elif definition.has("slot"):
+			disabled = disabled or member.is_pet
 		choices.append(CampaignMenu.choice("%s · %d/%d HP" % [member.name, member.hp, member.max_hp],
 			_apply_item.bind(member, item), disabled))
 	choices.append(CampaignMenu.choice("Back to pack", _show_inventory))
@@ -658,10 +701,16 @@ func _show_party() -> void:
 	for member: BattleRules.Fighter in _party:
 		var state: String = "Fallen" if member.hp == 0 else "%d/%d HP" % [member.hp, member.max_hp]
 		lines.append("%s · Lv %d · %s · %d/%d XP" % [member.name, member.level, state, member.xp, member.level * 15])
+		if member.id == "rook":
+			lines.append(_rook_identity())
 		if member.hp > 0:
-			var weapon: String = CampaignRun.CONTENT.items.get(member.weapon, {}).get("name", "Bare hands")
-			var armor: String = CampaignRun.CONTENT.items.get(member.armor, {}).get("name", "No armor")
-			lines.append("%s · %s · ATK %d · SPD %d" % [weapon, armor, member.attack_power(), member.initiative()])
+			var stats: String = "ATK %d · SPD %d" % [member.attack_power(), member.initiative()]
+			if member.is_pet:
+				lines.append("Pet · %s · %s" % [member.skill.name, stats])
+			else:
+				var weapon: String = CampaignRun.CONTENT.items.get(member.weapon, {}).get("name", "Bare hands")
+				var armor: String = CampaignRun.CONTENT.items.get(member.armor, {}).get("name", "No armor")
+				lines.append("%s · %s · %s" % [weapon, armor, stats])
 			if member.stat_points > 0:
 				choices.append(CampaignMenu.choice("Train %s · %d available" % [member.name, member.stat_points],
 					_show_training.bind(member)))
@@ -714,11 +763,18 @@ func _change_volume(music: bool, from_pause: bool) -> void:
 func _show_summary(notice: String = "") -> void:
 	var detail := "%s fell. Your party reached the stairs with %s remaining.\n\nWins · %d\nAchievements · %s" % [
 		_run.boss_name(), _run.floor_time_text(), _run.victories, ", ".join(_run.achievements)]
+	detail += "\nRook · %s · %s" % [_rook_identity(), _party[0].skill.name]
 	detail += "\n\nSystem · " + _run.announcement
 	if not notice.is_empty():
 		detail += "\n\n" + notice
 	_present("Floor %d cleared" % _run.floor_number, detail,
 		[CampaignMenu.choice("Return to save slots", _show_slots)], false)
+
+
+func _rook_identity() -> String:
+	var race: String = CampaignRun.CONTENT.races.get(_run.race_id, {}).get("name", "Human")
+	var role: String = CampaignRun.CONTENT.classes.get(_run.class_id, {}).get("name", "Unclassed")
+	return "%s · %s" % [race, role]
 
 
 func _present(title: String, detail: String, choices: Array[Dictionary], dismissible: bool = true) -> void:

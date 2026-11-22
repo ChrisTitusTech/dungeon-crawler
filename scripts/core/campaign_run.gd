@@ -7,6 +7,7 @@ const CONTENT: CampaignContent = preload("res://data/floor_one_content.tres")
 const REFUGE_LAYOUT: DungeonLayout = preload("res://data/safe_room.tres")
 const FLOOR_TIME_SECONDS := 30 * 60
 const PARTY_LIMIT := 4
+const PET_ID := "cinder"
 const BOSS_ID := "warden"
 const ENEMY_IDS := ["rat", "guard", BOSS_ID]
 const FLOOR_BOSSES := [BOSS_ID, "marshal", "regent"]
@@ -36,6 +37,8 @@ var seconds_left: float = FLOOR_TIME_SECONDS
 var victories: int = 0
 var boss_defeated: bool = false
 var completed: bool = false
+var race_id: String
+var class_id: String
 var _announcement_event: String = "intro"
 var _in_refuge: bool = false
 
@@ -192,7 +195,7 @@ func eat() -> void:
 
 func equip(member: BattleRules.Fighter, item: String) -> bool:
 	var definition: Dictionary = CONTENT.items.get(item, {})
-	if member.hp == 0 or count(item) == 0 or not definition.has("slot"):
+	if member.hp == 0 or member.is_pet or count(item) == 0 or not definition.has("slot"):
 		return false
 	spend_item(item)
 	if definition.slot == "weapon":
@@ -251,6 +254,19 @@ func recruit(cell: Vector2i) -> bool:
 	return true
 
 
+func rescue_pet(cell: Vector2i) -> bool:
+	var distance: Vector2i = (floor.player - cell).abs()
+	if at_camp() or floor.encounter != null or distance.x + distance.y > 1:
+		return false
+	if floor.terrain_at(cell) != "P" or used_sites.has(cell) or party.size() >= PARTY_LIMIT or count("bandage") == 0:
+		return false
+	spend_item("bandage")
+	party.append(CONTENT.make_fighter(PET_ID))
+	used_sites[cell] = true
+	event_occurred.emit("rescue_pet")
+	return true
+
+
 func loot_gear(cell: Vector2i) -> void:
 	for item: String in fallen_gear.get(cell, []):
 		add_item(item)
@@ -297,12 +313,49 @@ func settle_battle(enemy: DungeonFloor.Enemy, outcome: BattleRules.Outcome, poti
 		event_occurred.emit(foe_id)
 
 
-func escape(exit_cell: Vector2i) -> bool:
+func can_escape(exit_cell: Vector2i) -> bool:
 	var distance: Vector2i = (floor.player - exit_cell).abs()
 	if not boss_defeated or completed or at_camp() or floor.encounter != null or seconds_left <= 0.0:
 		return false
-	if distance.x + distance.y > 1 or floor.terrain_at(exit_cell) != ">":
+	return distance.x + distance.y <= 1 and floor.terrain_at(exit_cell) == ">"
+
+
+func advancement_choices() -> Dictionary:
+	if floor_number == 2:
+		return CONTENT.races
+	if floor_number == 3:
+		return CONTENT.classes
+	return {}
+
+
+func advancement_unlocked(choice: Dictionary) -> bool:
+	match choice.get("requires", ""):
+		"truce": return has_truce("watch")
+		"contract": return sponsor_contracts.values().has("fulfilled")
+		"": return true
+	return false
+
+
+func escape(exit_cell: Vector2i, choice_id: String = "") -> bool:
+	if not can_escape(exit_cell):
 		return false
+	var choices: Dictionary = advancement_choices()
+	if not choices.is_empty():
+		if not choices.has(choice_id) or not advancement_unlocked(choices[choice_id]):
+			return false
+		var choice: Dictionary = choices[choice_id]
+		var rook: BattleRules.Fighter = party[0]
+		var health: int = choice.get("hp", 0)
+		rook.max_hp += health
+		if rook.hp > 0:
+			rook.hp += health
+		rook.power += choice.get("power", 0)
+		rook.speed += choice.get("speed", 0)
+		if floor_number == 2:
+			race_id = choice_id
+		else:
+			class_id = choice_id
+			rook.skill = CONTENT.skills[choice.skill]
 	event_occurred.emit("escape" if floor_number == 1 else "escape_%d" % floor_number)
 	if floor_number == LAST_FLOOR:
 		completed = true
@@ -344,6 +397,7 @@ func snapshot() -> Dictionary:
 		"fallen_gear": fallen_gear.duplicate(true), "achievements": achievements.duplicate(),
 		"announcement_event": _announcement_event, "victories": victories,
 		"boss_defeated": boss_defeated, "completed": completed,
+		"race_id": race_id, "class_id": class_id,
 	}
 
 
@@ -356,6 +410,7 @@ static func restore(data: Dictionary) -> CampaignRun:
 		"reputation": TYPE_DICTIONARY, "sponsor_contracts": TYPE_DICTIONARY,
 		"achievements": TYPE_PACKED_STRING_ARRAY, "announcement_event": TYPE_STRING,
 		"victories": TYPE_INT, "boss_defeated": TYPE_BOOL, "completed": TYPE_BOOL,
+		"race_id": TYPE_STRING, "class_id": TYPE_STRING,
 	}
 	if not _matches(data, fields) or data.party.is_empty() or data.party.size() > PARTY_LIMIT:
 		return null
@@ -365,6 +420,12 @@ static func restore(data: Dictionary) -> CampaignRun:
 	if data.floor_number < 1 or data.floor_number > LAST_FLOOR or not CONTENT.show.has(data.announcement_event):
 		return null
 	if data.completed and (data.floor_number != LAST_FLOOR or not data.boss_defeated or data.in_refuge):
+		return null
+	var has_race: bool = CONTENT.races.has(data.race_id)
+	var has_class: bool = CONTENT.classes.has(data.class_id)
+	if (data.floor_number == 3 and not has_race) or (data.floor_number < 3 and data.race_id != ""):
+		return null
+	if (data.completed and not has_class) or (not data.completed and data.class_id != ""):
 		return null
 	var run := CampaignRun.new(data.seed, data.floor_number)
 	var saved_contracts: Dictionary = data.sponsor_contracts
@@ -418,6 +479,12 @@ static func restore(data: Dictionary) -> CampaignRun:
 		member.armor_bonus = CONTENT.items.get(member.armor, {}).get("bonus", 0)
 		member.injuries.assign(saved.injuries)
 		run.party.append(member)
+	if run.party[0].id != "rook":
+		return null
+	run.race_id = data.race_id
+	run.class_id = data.class_id
+	if not run.class_id.is_empty():
+		run.party[0].skill = CONTENT.skills[CONTENT.classes[run.class_id].skill]
 	run.inventory.assign(data.inventory)
 	run.used_sites.assign(data.used_sites)
 	run.fallen_gear.assign(data.fallen_gear)

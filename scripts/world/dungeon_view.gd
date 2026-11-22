@@ -242,6 +242,9 @@ func _draw_landmark(cell: Vector2i, center: Vector2, terrain: String) -> void:
 		elif terrain == "R":
 			_draw_outline(center, Vector2(10, 5), PARTY_MARK)
 			_draw_actor(center + Vector2(0, 3), PrototypeArt.SABLE, 31.0)
+		elif terrain == "P":
+			_draw_outline(center, Vector2(10, 5), PARTY_MARK)
+			_draw_actor(center + Vector2(0, 3), PrototypeArt.RAT, 24.0)
 
 
 func _draw_refuge_door(center: Vector2) -> void:

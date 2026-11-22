@@ -16,7 +16,7 @@ One hand-built isometric dungeon with turn-stepped movement, field of view, a mi
 A rendered playthrough used the safe-room doors, beds, dining table, and chest, then defeated the Floor 1 boss and reopened the cleared save. The 30 to 60 minute session target includes time spent in the refuge and menus.
 
 ## Milestone 3: Systems and demo (floors 1 to 3)
-**In progress.** Floor 1 has the first faction and reputation pass, a refuge workbench, and two guild contracts. The first art and audio pass adds continuous held movement, a side-view battle formation against a torchlit vault, combat effects, scene fades, original music and sound effects, and audio settings. Boss stairs connect all three floors, with a new layout, boss, and arrival checkpoint on each descent. Race and class selection, pets, full gamepad support, broader accessibility options, distinct art and audio for Floors 2 and 3, and the public demo remain open. [PC handoff](handoff.md)
+**In progress.** Floor 1 has the first faction and reputation pass, a refuge workbench, and two guild contracts. The first art and audio pass adds continuous held movement, a side-view battle formation against a torchlit vault, combat effects, scene fades, original music and sound effects, and audio settings. Boss stairs connect all three floors. Rook chooses a race after Floor 2 and a class after Floor 3, and the party can rescue Cinder on Floor 2. Full gamepad support, broader accessibility options, distinct art and audio for Floors 2 and 3, and the public demo remain open. [PC handoff](handoff.md)
 
 ## Milestone 4: Early Access (floors 1 to 6)
 **Planned.** Two full tiers of content, balance pass, save migration, tutorialisation, Steam integration (achievements, cloud saves), Steam Deck check, and launch.
@@ -52,7 +52,7 @@ Work items in order through the demo.
 19. [x] `crafting` adds the refuge workbench with three recipes that use materials from enemies and supply caches.
 20. [x] `guild-contracts` adds two refuge board contracts that unlock at two and five victories and pay one-time rewards.
 21. [x] `floor-one-polish` smooths held movement and adds a dungeon backdrop and opposing battle formations.
-22. [ ] `race-class` for race and class selection and pets.
+22. [x] `race-class` adds race and class choices with unlocks tied to play, plus a recruitable pet.
 23. [ ] `demo-release` for Floors 2 and 3, their art and audio, the demo, and the Steam page.
 
 ## Risks and open questions

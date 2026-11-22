@@ -29,7 +29,7 @@ Save in the safe room and close the game on both PCs before copying files. Back 
 | Windows | `%APPDATA%\Godot\app_userdata\Dungeon Crawler\` |
 | Linux | `${XDG_DATA_HOME:-$HOME/.local/share}/godot/app_userdata/Dungeon Crawler/` |
 
-The files live outside the Git checkout. Checkpoints preserve the current floor and the time remaining. Saves made before the three-floor campaign are incompatible. Use **Replace slot** to start fresh.
+The files live outside the Git checkout. Checkpoints preserve the current floor, time remaining, party, and advancement choices. Saves made before race and class selection are incompatible. Use **Replace slot** to start fresh.
 
 ## Resume Milestone 3
 
@@ -37,4 +37,4 @@ Milestones 0 through 2 are complete. Milestone 3 has a first pass of faction rep
 
 For the first playtest on the new PC, start a fresh slot, hold a direction along an open corridor, and enter a battle. Check that the camera follows without a stop at each tile, the opposing formations and combat readouts fit, and the clock continues to run. Enter the safe room, confirm the clock pauses, and reload the slot to check that the time was saved.
 
-For the progression playtest, use the stairs after beating each boss. Check that HP, injuries, equipment, and supplies carry forward, that the new clock starts on leaving the safe room, and that loading the slot returns to the new floor. The later floors reuse Floor 1 art and audio. The roadmap tracks the remaining demo work. [Technical design](technical-design.md)
+For the progression playtest, rescue Cinder on Floor 2, then use the stairs after each boss. Check that party state and supplies carry forward, the new clock starts on leaving the safe room, and reloading preserves the pet and selected race or class. The later floors reuse Floor 1 art and audio. The roadmap tracks the remaining demo work. [Technical design](technical-design.md)
