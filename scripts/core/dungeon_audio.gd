@@ -57,6 +57,15 @@ func _ready() -> void:
 		_effects.append(player)
 
 
+func stop_playback() -> void:
+	_enabled = false
+	if _fade != null:
+		_fade.kill()
+	for player: AudioStreamPlayer in _music + _effects:
+		player.stop()
+		player.stream = null
+
+
 func play_track(track: Track) -> void:
 	if not _enabled or _track == track:
 		return

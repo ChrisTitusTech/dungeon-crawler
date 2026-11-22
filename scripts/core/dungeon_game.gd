@@ -51,9 +51,12 @@ var _queued_use: bool
 var _held_action: StringName
 var _repeat: float
 var _last_clock_usec: int = Time.get_ticks_usec()
+var _quitting: bool
 
 
 func _ready() -> void:
+	if get_parent() == get_tree().root:
+		get_tree().auto_accept_quit = false
 	_dungeon.movement_finished.connect(_on_movement_finished)
 	_fade.finished.connect(_resume_scene_controls)
 	_wait_button.pressed.connect(_take_turn.bind(Vector2i.ZERO))
@@ -74,7 +77,25 @@ func _ready() -> void:
 	_show_slots()
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and is_node_ready() and get_parent() == get_tree().root:
+		_quit()
+
+
+func _quit() -> void:
+	if _quitting:
+		return
+	_quitting = true
+	_audio.stop_playback()
+	if DisplayServer.get_name() != "headless":
+		# Godot releases stopped streams on the audio mix thread.
+		await get_tree().create_timer(maxf(0.1, AudioServer.get_output_latency() * 2.0)).timeout
+	get_tree().quit()
+
+
 func _process(delta: float) -> void:
+	if _quitting:
+		return
 	var now: int = Time.get_ticks_usec()
 	_update_floor_clock((now - _last_clock_usec) / 1_000_000.0)
 	_last_clock_usec = now
