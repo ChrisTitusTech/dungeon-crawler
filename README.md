@@ -6,7 +6,7 @@ You are a contestant in a lethal, televised 18-floor dungeon run by a snarky Sys
 
 ## Status
 
-**Milestones 0 and 1 are complete.** The Milestone 2 vertical slice is playable. Start in a safe room, recruit Sable, and defeat Sir Aldren, the Hollow Castellan, before Floor 1 collapses. A human pacing playtest is still open. [Roadmap](docs/roadmap.md)
+**Milestones 0 through 2 are complete.** Start beside the safe-room door, recruit Sable, and defeat Sir Aldren, the Hollow Castellan, before Floor 1 collapses. Milestone 3 expands the campaign systems and builds toward the three-floor demo. [Roadmap](docs/roadmap.md)
 
 ## Documentation
 
@@ -21,7 +21,9 @@ Install the tools, then open `project.godot` in the editor or run `godot --edito
 
 ### Play Floor 1
 
-Choose one of three save slots. The safe room saves a checkpoint when you enter and offers a manual save, healing, and loot-box opening. The collapse clock advances with movement and waiting outside camp. A wipe or collapse restores the last checkpoint.
+Choose one of three save slots. New runs generate a 118×84 dungeon with varied rooms, paths, and encounters. Use the marked dungeon door to enter the separate safe-room map. Walk to a bed to fully heal standing party members and treat wounds, or use the dining table to restore up to half their maximum HP.
+
+Entering the safe room saves a checkpoint. Use the chest to save again or open reward boxes. Use the interior door to return to the dungeon tile you left. The collapse clock advances with movement and waiting on the dungeon floor. A wipe or collapse returns the party to its last safe-room checkpoint.
 
 Party HP, injuries, and equipment carry between fights. The pack lets you use tonics, treat wounds, and equip loot. Spend earned stat points from the Party menu. Each fighter gets one use of their skill per battle. After defeating Sir Aldren, use the stairs to clear the floor.
 
@@ -29,7 +31,7 @@ Party HP, injuries, and equipment carry between fights. The pack lets you use to
 | --- | --- | --- | --- |
 | Move one tile | WASD or arrow keys | D-pad or left stick | Click an adjacent tile |
 | Wait one turn | Q | Right shoulder button | Wait button |
-| Use a nearby landmark or open camp | E | A | Use button |
+| Use a door, furnishing, or other landmark | E | A | Use button |
 | Open party and training | C | Y | Party button |
 | Open inventory | I | X | Pack button |
 | Toggle minimap | M | Back / View | Map button |

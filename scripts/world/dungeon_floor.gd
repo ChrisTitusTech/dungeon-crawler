@@ -19,6 +19,7 @@ class Enemy:
 const SIGHT_RADIUS := 7
 const CHASE_RADIUS := 6
 const CARDINALS: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]
+const FIXTURES := ["B", "F", "L"]
 
 var size: Vector2i
 var player: Vector2i
@@ -61,7 +62,12 @@ func terrain_at(cell: Vector2i) -> String:
 
 func is_walkable(cell: Vector2i) -> bool:
 	var terrain: String = terrain_at(cell)
-	return terrain != "#" and terrain != "t"
+	return terrain != "#" and terrain != "t" and terrain not in FIXTURES
+
+
+func is_wall(cell: Vector2i) -> bool:
+	var terrain: String = terrain_at(cell)
+	return terrain == "#" or terrain == "t"
 
 
 func enemy_at(cell: Vector2i) -> Enemy:
@@ -135,7 +141,7 @@ func _step_toward(origin: Vector2i, goal: Vector2i) -> Vector2i:
 	for direction: Vector2i in CARDINALS:
 		var step: Vector2i = origin + direction
 		var distance: int = step.distance_squared_to(goal)
-		if distance < best_distance and not safe_room.has_point(step) and is_walkable(step) and enemy_at(step) == null:
+		if distance < best_distance and not safe_room.has_point(step) and terrain_at(step) != "D" and is_walkable(step) and enemy_at(step) == null:
 			next = step
 			best_distance = distance
 	return next

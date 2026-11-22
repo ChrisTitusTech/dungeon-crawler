@@ -1,20 +1,20 @@
 class_name FloorOneGenerator
 extends RefCounted
 
-const WIDTH := 77
-const HEIGHT := 47
-const SAFE := 4
-const BOSS := 7
-const SAFE_TEMPLATE := [
+const VERSION := 2
+const WIDTH := 118
+const HEIGHT := 84
+const LEGACY_DOOR := Vector2i(13, 21)
+const ENTRY := [
 	"###########",
 	"#t.......t#",
 	"#.........#",
-	"#....S.....",
+	"#..DS......",
 	"#.........#",
 	"#.........#",
 	"###########",
 ]
-const BOSS_TEMPLATE := [
+const ARENA := [
 	"#############",
 	"#t.........t#",
 	"#...........#",
@@ -25,104 +25,163 @@ const BOSS_TEMPLATE := [
 	"#t.........t#",
 	"#############",
 ]
-const CONNECTIONS: Array[Vector2i] = [
-	Vector2i(0, 1), Vector2i(1, 2), Vector2i(2, 3),
-	Vector2i(4, 5), Vector2i(5, 6), Vector2i(6, 7),
-	Vector2i(8, 9), Vector2i(9, 10), Vector2i(10, 11),
-	Vector2i(1, 5), Vector2i(5, 9), Vector2i(2, 6), Vector2i(6, 10),
-]
 
-var _cells := PackedByteArray()
+var _terrain := PackedByteArray()
 var _rooms: Array[Rect2i] = []
 var _random := RandomNumberGenerator.new()
 
 
 func generate(floor_seed: int) -> DungeonLayout:
 	_random.seed = floor_seed
-	_cells.resize(WIDTH * HEIGHT)
-	_cells.fill("#".unicode_at(0))
+	_terrain.resize(WIDTH * HEIGHT)
+	_terrain.fill("#".unicode_at(0))
 	_rooms.clear()
-	for index: int in 12:
-		_rooms.append(_make_room(index))
-	for edge: Vector2i in CONNECTIONS:
-		_connect_rooms(edge.x, edge.y)
-	for edge: Vector2i in [Vector2i(1, 6), Vector2i(5, 10)]:
-		if _random.randf() < 0.5:
-			_connect_rooms(edge.x, edge.y)
+	var entry := Vector2i(3, _random.randi_range(14, HEIGHT - 21))
+	var arena := Vector2i(101, _random.randi_range(9, HEIGHT - 18))
+	_stamp(entry, ENTRY)
+	_rooms.append(Rect2i(entry, Vector2i(11, 7)))
+	_place_rooms(_random.randi_range(18, 24))
+	_connect_rooms()
+	_stamp(arena, ARENA)
+	var arena_door: Vector2i = arena + Vector2i(0, 4)
+	var approach: Vector2i = _rooms[1].get_center()
+	for room: Rect2i in _rooms:
+		var center: Vector2i = room.get_center()
+		if center.distance_squared_to(arena_door) < approach.distance_squared_to(arena_door):
+			approach = center
+	var threshold: Vector2i = arena_door + Vector2i.LEFT
+	_tunnel(approach, threshold)
+	_put(threshold, ".")
+	_place_encounters()
 
-	_place_content()
 	var layout := DungeonLayout.new()
+	layout.refuge_door = entry + Vector2i(3, 3)
 	for y: int in HEIGHT:
-		layout.rows.append(_cells.slice(y * WIDTH, (y + 1) * WIDTH).get_string_from_ascii())
-	layout.safe_room = _rooms[SAFE].grow(-1)
+		layout.rows.append(_terrain.slice(y * WIDTH, (y + 1) * WIDTH).get_string_from_ascii())
 	return layout
 
 
-func _make_room(index: int) -> Rect2i:
-	if index == SAFE:
-		return _stamp(Vector2i(3, 18), SAFE_TEMPLATE)
-	if index == BOSS:
-		return _stamp(Vector2i(61, 17), BOSS_TEMPLATE)
-
-	@warning_ignore("integer_division")
-	var sector := Vector2i(index % 4 * 18, index / 4 * 14)
-	var width: int = _random.randi_range(8, 12)
-	var height: int = _random.randi_range(7, 9)
-	var room := Rect2i(sector + Vector2i(_random.randi_range(3, 5), _random.randi_range(3, 5)),
-		Vector2i(width, height))
-	for y: int in range(room.position.y, room.end.y):
-		for x: int in range(room.position.x, room.end.x):
-			_put(Vector2i(x, y), ".")
-	return room
+static func legacy(floor_seed: int) -> DungeonLayout:
+	var layout: DungeonLayout = LegacyFloorOneGenerator.new().generate(floor_seed)
+	var row: String = layout.rows[LEGACY_DOOR.y]
+	layout.rows[LEGACY_DOOR.y] = row.left(LEGACY_DOOR.x) + "D" + row.substr(LEGACY_DOOR.x + 1)
+	layout.refuge_door = LEGACY_DOOR
+	return layout
 
 
-func _stamp(origin: Vector2i, template: Array) -> Rect2i:
-	for y: int in template.size():
-		var row: String = template[y]
-		for x: int in row.length():
-			_put(origin + Vector2i(x, y), row[x])
-	return Rect2i(origin, Vector2i(template[0].length(), template.size()))
+func _place_rooms(target: int) -> void:
+	for attempt: int in 900:
+		if _rooms.size() >= target + 1:
+			break
+		var size := Vector2i(_random.randi_range(7, 15), _random.randi_range(6, 11))
+		var origin := Vector2i(_random.randi_range(18, 98 - size.x),
+			_random.randi_range(3, HEIGHT - size.y - 3))
+		var candidate := Rect2i(origin, size)
+		if _rooms.any(func(room: Rect2i) -> bool: return candidate.grow(2).intersects(room)):
+			continue
+		_rooms.append(candidate)
+		var chamfer: int = _random.randi_range(0, 2)
+		for y: int in size.y:
+			for x: int in size.x:
+				var edge_x: int = mini(x, size.x - x - 1)
+				var edge_y: int = mini(y, size.y - y - 1)
+				if edge_x + edge_y >= chamfer:
+					_put(origin + Vector2i(x, y), ".")
 
 
-func _connect_rooms(first: int, second: int) -> void:
-	var a: Vector2i = _rooms[first].get_center()
-	var b: Vector2i = _rooms[second].get_center()
-	if first == SAFE:
-		a = Vector2i(_rooms[SAFE].end.x - 1, a.y)
-	if second == BOSS:
-		b = Vector2i(_rooms[BOSS].position.x, b.y)
-	var bend := Vector2i(b.x, a.y) if _random.randf() < 0.5 else Vector2i(a.x, b.y)
-	if first == SAFE or second == BOSS:
-		var middle_x: int = (a.x + b.x) >> 1
-		_carve(a, Vector2i(middle_x, a.y))
-		_carve(Vector2i(middle_x, a.y), Vector2i(middle_x, b.y))
-		_carve(Vector2i(middle_x, b.y), b)
+func _connect_rooms() -> void:
+	var joined: Array[int] = [0]
+	var links := {}
+	while joined.size() < _rooms.size():
+		var best := Vector2i(-1, -1)
+		var score: float = INF
+		for first: int in joined:
+			for second: int in range(1, _rooms.size()):
+				if joined.has(second):
+					continue
+				var distance: float = _rooms[first].get_center().distance_to(_rooms[second].get_center())
+				var candidate: float = distance * _random.randf_range(0.8, 1.2)
+				if candidate < score:
+					score = candidate
+					best = Vector2i(first, second)
+		_link(best.x, best.y)
+		links[Vector2i(mini(best.x, best.y), maxi(best.x, best.y))] = true
+		joined.append(best.y)
+
+	var extra: int = _random.randi_range(4, 9)
+	for attempt: int in 90:
+		if extra == 0:
+			break
+		var first: int = _random.randi_range(1, _rooms.size() - 2)
+		var second: int = _random.randi_range(first + 1, _rooms.size() - 1)
+		var key := Vector2i(first, second)
+		if links.has(key) or _rooms[first].get_center().distance_squared_to(_rooms[second].get_center()) > 34 * 34:
+			continue
+		_link(first, second)
+		links[key] = true
+		extra -= 1
+
+
+func _link(first: int, second: int) -> void:
+	var start: Vector2i = _rooms[first].get_center()
+	if first == 0:
+		start.x = _rooms[0].end.x - 1
+	_tunnel(start, _rooms[second].get_center())
+
+
+func _tunnel(start: Vector2i, end: Vector2i) -> void:
+	if _random.randf() < 0.5:
+		var x: int = _random.randi_range(mini(start.x, end.x), maxi(start.x, end.x))
+		var a := Vector2i(x, start.y)
+		var b := Vector2i(x, end.y)
+		_carve(start, a)
+		_carve(a, b)
+		_carve(b, end)
 	else:
-		_carve(a, bend)
-		_carve(bend, b)
+		var y: int = _random.randi_range(mini(start.y, end.y), maxi(start.y, end.y))
+		var a := Vector2i(start.x, y)
+		var b := Vector2i(end.x, y)
+		_carve(start, a)
+		_carve(a, b)
+		_carve(b, end)
 
 
 func _carve(start: Vector2i, end: Vector2i) -> void:
 	var point: Vector2i = start
 	var step: Vector2i = (end - start).sign()
 	while point != end:
-		_put(point, ".")
+		if _terrain[point.y * WIDTH + point.x] == "#".unicode_at(0):
+			_put(point, ".")
 		point += step
-	_put(end, ".")
 
 
-func _place_content() -> void:
-	for index: int in _rooms.size():
-		if index == SAFE or index == BOSS:
-			continue
+func _place_encounters() -> void:
+	var first_room: int = 1
+	for index: int in range(1, _rooms.size()):
+		var entry: Vector2i = _rooms[0].get_center()
+		if entry.distance_squared_to(_rooms[index].get_center()) < entry.distance_squared_to(_rooms[first_room].get_center()):
+			first_room = index
+	for index: int in range(1, _rooms.size()):
 		var room: Rect2i = _rooms[index]
 		var center: Vector2i = room.get_center()
-		var encounter_count: int = 1 if index in [0, 1, 5, 8] else 2
-		for offset: int in encounter_count:
-			var kind := "r" if index in [0, 1, 5, 8] or _random.randf() < 0.55 else "g"
-			_put(center + Vector2i(_random.randi_range(-1, 1), (offset * 2) - 1), kind)
-		_put(room.position + Vector2i(1, 1), "R" if index == 5 else "c")
+		if index == first_room:
+			_put(center, "R")
+			_put(center + Vector2i(2, -1), "r")
+			continue
+		var count: int = _random.randi_range(0, 2)
+		for enemy: int in count:
+			var cell: Vector2i = center + Vector2i(_random.randi_range(-1, 1), enemy * 2 - 1)
+			_put(cell, "r" if _random.randf() < 0.65 else "g")
+		if count == 0 or _random.randf() < 0.48:
+			_put(room.position + Vector2i(2, 1), "c")
+
+
+func _stamp(origin: Vector2i, rows: Array) -> void:
+	for y: int in rows.size():
+		var row: String = rows[y]
+		for x: int in row.length():
+			_put(origin + Vector2i(x, y), row[x])
 
 
 func _put(cell: Vector2i, glyph: String) -> void:
-	_cells[cell.y * WIDTH + cell.x] = glyph.unicode_at(0)
+	_terrain[cell.y * WIDTH + cell.x] = glyph.unicode_at(0)

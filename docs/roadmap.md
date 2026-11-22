@@ -11,12 +11,12 @@ One hand-built isometric dungeon with turn-stepped movement, field of view, a mi
 **Complete.** A rendered playthrough cleared all four encounters and verified keyboard, gamepad, and mouse movement. All 11 GUT tests passed, and local Windows and Linux release exports succeeded.
 
 ## Milestone 2: Vertical slice (floor 1)
-**Playable.** Floor 1 has a seeded layout, a hand-built safe room and boss chamber, a 420-turn collapse clock, one recruit, levelling and stat allocation, gear, persistent injuries, versioned checkpoints, and achievements with loot boxes and announcer lines.
+**Complete.** Floor 1 has a 118×84 seeded layout with variable room placement, corridor loops, and encounter counts. A door leads to a separate walkable safe room with beds, a dining table, and a save chest. The floor has a 720-turn collapse clock, one recruit, levelling and stat allocation, gear, persistent injuries, versioned checkpoints, and achievements with loot boxes and announcer lines.
 
-A rendered playthrough recruited Sable, opened both box tiers, defeated the Floor 1 boss, descended, and reopened the cleared save. Verify the 30 to 60 minute pacing target in a human playtest before closing this milestone.
+A rendered playthrough used the safe-room doors, beds, dining table, and chest, then defeated the Floor 1 boss and reopened the cleared save. All 19 tests passed, and Windows and Linux release exports succeeded. The 30 to 60 minute target remains a benchmark for balance playtests.
 
 ## Milestone 3: Systems and demo (floors 1 to 3)
-**Planned.** Factions and reputation, crafting, viewers and sponsors, race and class selection, pets, full gamepad support, production art and audio pass, settings and accessibility options. Ends in a public demo and Steam page.
+**Next.** Factions and reputation, crafting, viewers and sponsors, race and class selection, pets, full gamepad support, production art and audio pass, settings and accessibility options. Ends in a public demo and Steam page.
 
 ## Milestone 4: Early Access (floors 1 to 6)
 **Planned.** Two full tiers of content, balance pass, save migration, tutorialisation, Steam integration (achievements, cloud saves), Steam Deck check, and launch.
@@ -47,7 +47,7 @@ Work items in order through the demo.
 14. [x] `safe-room-save` adds three versioned slots, manual and entry saves, and checkpoint reload after a wipe.
 15. [x] `collapse-timer` tracks turns outside camp and reloads the checkpoint after collapse.
 16. [x] `show-layer` connects run events to achievements, loot boxes, and written announcer lines.
-17. [ ] `vertical-slice` has playable Floor 1 content and a verified boss clear. Human pacing playtest remains open.
+17. [x] `vertical-slice` delivers a playable Floor 1 with a verified boss clear and completed save reload.
 18. [ ] `factions` for faction behaviour and reputation.
 19. [ ] `crafting` for recipes and stations.
 20. [ ] `viewers-sponsors` for viewer count and sponsors.

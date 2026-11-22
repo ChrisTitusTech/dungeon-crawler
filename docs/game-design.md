@@ -12,7 +12,7 @@ Approach: prove the core loop in a one-floor vertical slice, widen to a three-fl
 
 Milestones 0 and 1 are complete. Rook and Mira can explore a hand-built dungeon with fog of war and a minimap, then fight four encounters using Attack, Defend, Item, and Flee. HP and tonics carry between fights. A party wipe restarts the test map.
 
-The Milestone 2 vertical slice is playable. Rook and Mira can recruit Sable, return to camp for treatment and loot boxes, and use the stairs after defeating Sir Aldren, the Hollow Castellan. The initial collapse budget is 420 turns outside camp. The human playtest will determine whether that budget suits the 30 to 60 minute pacing target. [Roadmap](roadmap.md)
+Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dungeon door to a separate safe room, and use the stairs after defeating Sir Aldren, the Hollow Castellan. Beds heal and treat wounds, meals restore some HP, and the chest saves progress and opens loot boxes. New runs have 720 turns on the dungeon floor. The 30 to 60 minute pacing target guides future balance passes. [Roadmap](roadmap.md)
 
 ## Key decisions
 

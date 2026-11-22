@@ -11,9 +11,9 @@
 
 ## Floor 1 vertical slice
 
-- `FloorOneGenerator` uses the run seed for procedural chambers, corridors, and encounter placement. Authored templates anchor the safe room and boss chamber.
+- `FloorOneGenerator` uses the run seed to place varied chambers on a 118×84 map, connect them with a route network, and add optional loops and encounters. Authored templates anchor the entry and boss chamber. The safe room has its own layout and movement state.
 - `CampaignRun` owns party progression, the inventory, explored sites, the collapse clock, and show events. `CampaignContent` loads heroes, enemies, items, skills, reward tables, and announcer lines from a Godot resource.
-- `CampaignSave` stores a versioned snapshot per slot under `user://`. Checkpoints record the seed, party, inventory, enemies, explored cells, and clock. Collapse and party wipes restore the latest checkpoint, and a Floor 1 clear records the completed run.
+- `CampaignSave` stores a versioned snapshot per slot under `user://`. Checkpoints record the layout version, seed, dungeon return tile, safe-room position, party, inventory, enemies, explored cells, and clock. Existing slots keep the original layout with a doorway to the new safe room. Collapse and party wipes restore the latest checkpoint, and a Floor 1 clear records the completed run.
 
 ## Planned architecture
 

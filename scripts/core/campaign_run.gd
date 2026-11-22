@@ -4,7 +4,8 @@ extends RefCounted
 signal event_occurred(event: String)
 
 const CONTENT: CampaignContent = preload("res://data/floor_one_content.tres")
-const TURN_BUDGET := 420
+const REFUGE_LAYOUT: DungeonLayout = preload("res://data/safe_room.tres")
+const TURN_BUDGET := 720
 const PARTY_LIMIT := 4
 const BOSS_ID := "warden"
 const ENEMY_IDS := ["rat", "guard", BOSS_ID]
@@ -12,6 +13,8 @@ const WARNINGS := {100: "warning", 40: "urgent", 10: "critical"}
 
 var seed: int
 var floor: DungeonFloor
+var refuge: DungeonFloor
+var refuge_door: Vector2i
 var party: Array[BattleRules.Fighter] = []
 var inventory: Dictionary[String, int] = {}
 var used_sites: Dictionary[Vector2i, bool] = {}
@@ -25,12 +28,17 @@ var victories: int = 0
 var boss_defeated: bool = false
 var completed: bool = false
 var _announcement_event: String = "intro"
+var _layout_version: int
+var _in_refuge: bool = false
 
 
-func _init(floor_seed: int) -> void:
+func _init(floor_seed: int, layout_version: int = FloorOneGenerator.VERSION) -> void:
 	seed = floor_seed
-	var layout: DungeonLayout = FloorOneGenerator.new().generate(seed)
+	_layout_version = layout_version
+	var layout: DungeonLayout = FloorOneGenerator.legacy(seed) if layout_version == 1 else FloorOneGenerator.new().generate(seed)
 	floor = DungeonFloor.new(layout.rows, layout.safe_room)
+	refuge_door = layout.refuge_door
+	refuge = DungeonFloor.new(REFUGE_LAYOUT.rows)
 	party = [CONTENT.make_fighter("rook"), CONTENT.make_fighter("mira")]
 	inventory = {"tonic": 4, "bandage": 2}
 	event_occurred.connect(_on_show_event)
@@ -38,7 +46,23 @@ func _init(floor_seed: int) -> void:
 
 
 func at_camp() -> bool:
-	return floor.safe_room.has_point(floor.player)
+	return _in_refuge
+
+
+func active_floor() -> DungeonFloor:
+	return refuge if _in_refuge else floor
+
+
+func enter_refuge() -> bool:
+	var distance: Vector2i = (floor.player - refuge_door).abs()
+	if _in_refuge or floor.encounter != null or distance.x + distance.y > 1:
+		return false
+	_in_refuge = true
+	return true
+
+
+func leave_refuge() -> void:
+	_in_refuge = false
 
 
 func boss_name() -> String:
@@ -75,6 +99,14 @@ func rest() -> void:
 		if member.hp > 0:
 			member.hp = member.max_hp
 			member.injuries.clear()
+
+
+func eat() -> void:
+	if not at_camp():
+		return
+	for member: BattleRules.Fighter in party:
+		if member.hp > 0:
+			member.hp = mini(member.max_hp, member.hp + ceili(member.max_hp * 0.5))
 
 
 func equip(member: BattleRules.Fighter, item: String) -> bool:
@@ -199,6 +231,7 @@ func snapshot() -> Dictionary:
 		})
 	return {
 		"seed": seed, "player": floor.player, "turn": floor.turn, "turns_left": turns_left,
+		"layout_version": _layout_version, "in_refuge": _in_refuge, "refuge_player": refuge.player,
 		"enemies": enemies, "explored": floor.explored.keys(), "party": members,
 		"inventory": inventory.duplicate(), "used_sites": used_sites.duplicate(),
 		"fallen_gear": fallen_gear.duplicate(true), "achievements": achievements.duplicate(),
@@ -218,9 +251,21 @@ static func restore(data: Dictionary) -> CampaignRun:
 	if not _matches(data, fields) or data.party.is_empty() or data.party.size() > PARTY_LIMIT:
 		return null
 
-	var run := CampaignRun.new(data.seed)
-	if not run.floor.is_walkable(data.player) or (not data.completed and not run.floor.safe_room.has_point(data.player)):
+	var layout_version: Variant = data.get("layout_version", 1)
+	if not layout_version is int or layout_version not in [1, FloorOneGenerator.VERSION]:
 		return null
+	var run := CampaignRun.new(data.seed, layout_version)
+	if not run.floor.is_walkable(data.player):
+		return null
+	var camp_state: Variant = data.get("in_refuge", layout_version == 1 and not data.completed)
+	var camp_cell: Variant = data.get("refuge_player", run.refuge.player)
+	if not camp_state is bool or not camp_cell is Vector2i or not run.refuge.is_walkable(camp_cell):
+		return null
+	var dungeon_cell: Vector2i = data.player
+	if not data.has("in_refuge") and layout_version == 1 and not data.completed:
+		if not run.floor.safe_room.has_point(dungeon_cell):
+			return null
+		dungeon_cell = run.refuge_door
 	for cell: Variant in data.explored:
 		if not cell is Vector2i or not Rect2i(Vector2i.ZERO, run.floor.size).has_point(cell):
 			return null
@@ -232,7 +277,9 @@ static func restore(data: Dictionary) -> CampaignRun:
 			return null
 	if data.turn < 0 or data.turns_left <= 0 or data.turns_left > TURN_BUDGET:
 		return null
-	run.floor.restore_checkpoint(data.player, data.turn, data.enemies, data.explored)
+	run.floor.restore_checkpoint(dungeon_cell, data.turn, data.enemies, data.explored)
+	run.refuge.restore_checkpoint(camp_cell, 0, {}, [])
+	run._in_refuge = camp_state
 	run.party.clear()
 	var member_fields := {
 		"id": TYPE_STRING, "hp": TYPE_INT, "max_hp": TYPE_INT, "power": TYPE_INT,

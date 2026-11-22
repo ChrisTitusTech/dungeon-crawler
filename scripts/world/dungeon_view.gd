@@ -28,7 +28,7 @@ func load_floor(floor_state: DungeonFloor, party: Array[BattleRules.Fighter], ca
 func refresh() -> void:
 	_camera.position = _tiles.map_to_local(_floor.player)
 	for cell: Vector2i in _floor.explored:
-		if _floor.is_walkable(cell):
+		if not _floor.is_wall(cell):
 			var variant: int = (cell.x * 31 + cell.y * 17 + cell.x * cell.y * 7) % 7
 			var atlas_cell := Vector2i(variant if variant <= 2 else 0, 0)
 			var shading: int = 0 if _floor.visible.has(cell) else 1
@@ -60,7 +60,7 @@ func _draw_cell(cell: Vector2i) -> void:
 	var terrain: String = _floor.terrain_at(cell)
 	var is_visible: bool = _floor.visible.has(cell)
 
-	if not _floor.is_walkable(cell):
+	if _floor.is_wall(cell):
 		var tint: Color = Color.WHITE if is_visible else REMEMBERED
 		var region: Rect2 = _wall_region(cell)
 		draw_texture_rect_region(STONE, Rect2(center - WALL_OFFSET, region.size), region, tint)
@@ -96,6 +96,15 @@ func _draw_cell(cell: Vector2i) -> void:
 
 
 func _draw_landmark(cell: Vector2i, center: Vector2, terrain: String) -> void:
+	if terrain == "D" or terrain == "d":
+		_draw_refuge_door(center)
+		return
+	if _campaign.at_camp():
+		match terrain:
+			"B": _draw_bed(center)
+			"F": _draw_dining_table(center)
+			"L": _draw_chest(center)
+		return
 	if _campaign.fallen_gear.has(cell):
 		_draw_outline(center, Vector2(8, 4), Color("#c89b66"))
 	if terrain == ">" or terrain == "S":
@@ -104,18 +113,61 @@ func _draw_landmark(cell: Vector2i, center: Vector2, terrain: String) -> void:
 			draw_line(center + Vector2(-6, offset), center + Vector2(6, offset), color)
 	elif not _campaign.used_sites.has(cell):
 		if terrain == "c":
-			draw_rect(Rect2(center + Vector2(-5, -4), Vector2(10, 6)), Color("#5c4034"))
-			draw_line(center + Vector2(-5, -4), center + Vector2(5, -4), Color("#ebbb74"))
+			_draw_chest(center)
 		elif terrain == "R":
 			_draw_outline(center, Vector2(10, 5), PARTY_MARK)
 			_draw_actor(center + Vector2(0, 3), PrototypeArt.SABLE, 31.0)
+
+
+func _draw_refuge_door(center: Vector2) -> void:
+	var outline := PackedVector2Array([
+		center + Vector2(-8, 4), center + Vector2(-8, -11), center + Vector2(-4, -16),
+		center + Vector2(4, -16), center + Vector2(8, -11), center + Vector2(8, 4)])
+	draw_colored_polygon(outline, Color("#4a6664"))
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-6, 3), center + Vector2(-6, -10), center + Vector2(-3, -13),
+		center + Vector2(3, -13), center + Vector2(6, -10), center + Vector2(6, 3)]), Color("#875d3c"))
+	for offset: int in [-3, 0, 3]:
+		draw_line(center + Vector2(offset, -10), center + Vector2(offset, 3), Color("#503b33"))
+	draw_circle(center + Vector2(3, -4), 1.5, Color("#f0c97c"))
+	_draw_outline(center + Vector2(0, 4), Vector2(9, 3), PARTY_MARK)
+
+
+func _draw_bed(center: Vector2) -> void:
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-12, -2), center + Vector2(-2, -7),
+		center + Vector2(12, 0), center + Vector2(12, 4),
+		center + Vector2(2, 9), center + Vector2(-12, 2)]), Color("#5b4236"))
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-11, -3), center + Vector2(-2, -7),
+		center + Vector2(11, 0), center + Vector2(2, 5)]), Color("#5d7880"))
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-10, -3), center + Vector2(-2, -7),
+		center + Vector2(3, -4), center + Vector2(-5, 0)]), Color("#e0d2ac"))
+
+
+func _draw_dining_table(center: Vector2) -> void:
+	for leg: Vector2 in [Vector2(-10, -2), Vector2(0, 3), Vector2(12, -2)]:
+		draw_line(center + leg, center + leg + Vector2(0, 6), Color("#5a4036"), 2.0)
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-13, -4), center + Vector2(-1, -10),
+		center + Vector2(13, -3), center + Vector2(1, 3)]), Color("#a37951"))
+	draw_circle(center + Vector2(-4, -4), 3.0, Color("#ded4ae"))
+	draw_circle(center + Vector2(4, -3), 3.0, Color("#ded4ae"))
+	draw_circle(center + Vector2(-4, -4), 1.5, Color("#893e37"))
+	draw_circle(center + Vector2(4, -3), 1.5, Color("#893e37"))
+
+
+func _draw_chest(center: Vector2) -> void:
+	draw_rect(Rect2(center + Vector2(-5, -4), Vector2(10, 6)), Color("#5c4034"))
+	draw_line(center + Vector2(-5, -4), center + Vector2(5, -4), Color("#ebbb74"))
 
 
 func _wall_region(cell: Vector2i) -> Rect2:
 	var connections: int = 0
 	for index: int in WALL_CONNECTIONS.size():
 		var neighbor: Vector2i = cell + WALL_CONNECTIONS[index]
-		if _floor.explored.has(neighbor) and not _floor.is_walkable(neighbor):
+		if _floor.explored.has(neighbor) and _floor.is_wall(neighbor):
 			connections |= 1 << index
 
 	# The floor variants occupy the first row. The next four rows store the wall masks.

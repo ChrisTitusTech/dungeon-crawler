@@ -19,14 +19,13 @@ func _draw() -> void:
 	if _floor == null:
 		return
 
-	var tile: float = minf(2.0, floorf(minf(size.x / _floor.size.x, size.y / _floor.size.y)))
-	tile = maxf(1.0, tile)
+	var tile: float = minf(2.0, minf(size.x / _floor.size.x, size.y / _floor.size.y))
 	var origin: Vector2 = ((size - Vector2(_floor.size) * tile) / 2.0).floor()
 	for cell: Vector2i in _floor.explored:
 		var color: Color = WALL
 		if _floor.is_walkable(cell):
 			color = VISIBLE if _floor.visible.has(cell) else FLOOR
-			if _floor.safe_room.has_point(cell):
+			if _floor.terrain_at(cell) in ["D", "d"]:
 				color = Color("#448078")
 			elif _floor.terrain_at(cell) == ">":
 				color = Color("#e8c07b")

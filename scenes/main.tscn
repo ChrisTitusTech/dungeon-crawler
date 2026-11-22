@@ -121,44 +121,52 @@ offset_bottom = -10.0
 grow_vertical = 0
 mouse_filter = 2
 
-[node name="Actions" type="HBoxContainer" parent="Interface/HUD/Footer"]
+[node name="FooterContent" type="VBoxContainer" parent="Interface/HUD/Footer"]
+layout_mode = 2
+
+[node name="LandmarkHint" type="Label" parent="Interface/HUD/Footer/FooterContent"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="Actions" type="HBoxContainer" parent="Interface/HUD/Footer/FooterContent"]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="Status" type="Label" parent="Interface/HUD/Footer/Actions"]
+[node name="Status" type="Label" parent="Interface/HUD/Footer/FooterContent/Actions"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text_overrun_behavior = 3
 
-[node name="Interact" type="Button" parent="Interface/HUD/Footer/Actions"]
+[node name="Interact" type="Button" parent="Interface/HUD/Footer/FooterContent/Actions"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 focus_mode = 0
 text = "Use [E]"
 
-[node name="Party" type="Button" parent="Interface/HUD/Footer/Actions"]
+[node name="Party" type="Button" parent="Interface/HUD/Footer/FooterContent/Actions"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 focus_mode = 0
 text = "Party [C]"
 
-[node name="Inventory" type="Button" parent="Interface/HUD/Footer/Actions"]
+[node name="Inventory" type="Button" parent="Interface/HUD/Footer/FooterContent/Actions"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 focus_mode = 0
 text = "Pack [I]"
 
-[node name="Wait" type="Button" parent="Interface/HUD/Footer/Actions"]
+[node name="Wait" type="Button" parent="Interface/HUD/Footer/FooterContent/Actions"]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 text = "Wait [Q]"
 
-[node name="Map" type="Button" parent="Interface/HUD/Footer/Actions"]
+[node name="Map" type="Button" parent="Interface/HUD/Footer/FooterContent/Actions"]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
