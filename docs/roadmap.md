@@ -16,7 +16,7 @@ One hand-built isometric dungeon with turn-stepped movement, field of view, a mi
 A rendered playthrough used the safe-room doors, beds, dining table, and chest, then defeated the Floor 1 boss and reopened the cleared save. The 30 to 60 minute session target includes time spent in the refuge and menus.
 
 ## Milestone 3: Systems and demo (floors 1 to 3)
-**In progress.** Floor 1 has the first faction and reputation pass, a refuge workbench, and two guild contracts. The first art and audio pass adds continuous held movement, a side-view battle formation against a torchlit vault, combat effects, scene fades, original music and sound effects, and audio settings. Race and class selection, pets, full gamepad support, broader accessibility options, Floors 2 and 3 with their own art and audio, and the public demo remain open. [PC handoff](handoff.md)
+**In progress.** Floor 1 has the first faction and reputation pass, a refuge workbench, and two guild contracts. The first art and audio pass adds continuous held movement, a side-view battle formation against a torchlit vault, combat effects, scene fades, original music and sound effects, and audio settings. Boss stairs connect all three floors, with a new layout, boss, and arrival checkpoint on each descent. Race and class selection, pets, full gamepad support, broader accessibility options, distinct art and audio for Floors 2 and 3, and the public demo remain open. [PC handoff](handoff.md)
 
 ## Milestone 4: Early Access (floors 1 to 6)
 **Planned.** Two full tiers of content, balance pass, save migration, tutorialisation, Steam integration (achievements, cloud saves), Steam Deck check, and launch.

@@ -6,7 +6,7 @@ Your party must survive an 18-floor dungeon run by a snarky System AI. Explore i
 
 ## Status
 
-**Milestones 0 through 2 are complete.** Start beside the safe-room door, recruit Sable, and defeat Sir Aldren, the Hollow Castellan, before Floor 1 collapses. Milestone 3 is in progress. Floor 1 has faction reputation, crafting, guild contracts, and the first art and audio pass. [Roadmap](docs/roadmap.md)
+**Milestones 0 through 2 are complete.** Milestone 3 is in progress. The campaign runs through three floors, each with its own layout and boss. Floor 1 has faction reputation, crafting, guild contracts, and the first art and audio pass. [Roadmap](docs/roadmap.md)
 
 ## Documentation
 
@@ -20,7 +20,7 @@ Your party must survive an 18-floor dungeon run by a snarky System AI. Explore i
 
 Install the tools, then open `project.godot` in the editor or run `godot --editor --path .` from the repo root. Press F5 to run the project. [Prerequisites](PREREQUISITES.md)
 
-### Play Floor 1
+### Play the campaign
 
 Choose one of three save slots. New runs generate a 118×84 dungeon with varied rooms, paths, and encounters. Use the marked dungeon door to enter the separate safe-room map. Walk to a bed to fully heal standing party members and treat wounds, or use the dining table to restore up to half their maximum HP.
 
@@ -28,7 +28,9 @@ Entering the safe room saves a checkpoint. Use the chest to save again or open r
 
 At the workbench, turn pelts, iron scrap, and bitterroot into supplies or a Tempered Longsword. Hunting Ashfang beasts or offering bandages to the Watch envoy can earn a truce with Barrow Sentinels. Visit the refuge contract board to see guild offers and their battle conditions. The two Floor 1 contracts unlock after two and five victories.
 
-Party HP, injuries, and equipment carry between fights. The pack lets you use tonics, treat wounds, and equip loot. Spend earned stat points from the Party menu. Each fighter gets one use of their skill per battle. After defeating Sir Aldren, use the stairs to clear the floor.
+Party HP, injuries, and equipment carry between fights. The pack lets you use tonics, treat wounds, and equip loot. Spend earned stat points from the Party menu. Each fighter gets one use of their skill per battle. Recruit Sable before leaving Floor 1. After defeating each boss, use the stairs. Floors 2 and 3 start at a safe-room checkpoint with a fresh 30-minute countdown. The stairs on Floor 3 finish the run.
+
+The three-floor campaign uses a new checkpoint format. Choose **Replace slot** to start a new run in a slot occupied by an older save.
 
 | Action | Keyboard | Gamepad | Mouse |
 | --- | --- | --- | --- |

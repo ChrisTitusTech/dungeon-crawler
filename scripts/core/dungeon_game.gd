@@ -213,12 +213,11 @@ func _open_battle(enemy_kind: DungeonFloor.EnemyKind) -> void:
 
 
 func _begin_battle(enemy_kind: DungeonFloor.EnemyKind) -> void:
-	var enemy_id: String = CampaignRun.ENEMY_IDS[enemy_kind]
 	var opponent: BattleRules.Fighter
 	if _run != null:
-		opponent = CampaignRun.CONTENT.make_fighter(enemy_id)
+		opponent = CampaignRun.CONTENT.make_fighter(_run.enemy_id(enemy_kind))
 	else:
-		var enemy_name: String = CampaignRun.CONTENT.foes[enemy_id].name
+		var enemy_name: String = CampaignRun.CONTENT.foes[CampaignRun.ENEMY_IDS[enemy_kind]].name
 		match enemy_kind:
 			DungeonFloor.EnemyKind.RAT:
 				opponent = BattleRules.Fighter.new(enemy_name, 13, 4, 7)
@@ -284,7 +283,7 @@ func _refresh_exploration(notice: String) -> void:
 	_remaining.text = "%d foes left" % _floor.enemies.size()
 	_status.text = "Dungeon clear." if _floor.enemies.is_empty() else notice
 	if _run != null:
-		_title.text = "Safe room" if _run.at_camp() else "Floor 1"
+		_title.text = "Floor %d safe room" % _run.floor_number if _run.at_camp() else "Floor %d" % _run.floor_number
 		_turn.text = "Time left %s" % _run.floor_time_text()
 		_remaining.text = "Clock paused" if _run.at_camp() else "%d wins" % _run.victories
 		_announcer.text = "Recover at the beds or table. The workbench, envoy, and contract board are inside." if _run.at_camp() else "System · %s" % _run.announcement
@@ -308,8 +307,9 @@ func _show_slots(message: String = "Choose a save slot to enter Floor 1.") -> vo
 		var saved: Dictionary = CampaignSave.read(save_directory, slot)
 		if CampaignSave.exists(save_directory, slot):
 			if not saved.is_empty():
-				var suffix: String = " · Cleared" if saved.get("completed", false) else " · Continue"
-				choices.append(CampaignMenu.choice("Slot %d%s" % [slot, suffix], _continue_slot.bind(slot)))
+				var suffix: String = "Cleared" if saved.get("completed", false) else "Continue"
+				choices.append(CampaignMenu.choice("Slot %d · Floor %s · %s" % [
+					slot, str(saved.get("floor_number", 1)), suffix], _continue_slot.bind(slot)))
 			choices.append(CampaignMenu.choice("Replace slot %d" % slot, _confirm_replace.bind(slot)))
 		else:
 			choices.append(CampaignMenu.choice("Slot %d · New run" % slot, _new_slot.bind(slot)))
@@ -379,7 +379,7 @@ func _save(checkpoint_in_refuge: bool = false) -> String:
 		_checkpoint["in_refuge"] = true
 	var error: Error = CampaignSave.write(save_directory, _slot, _checkpoint)
 	if error != OK:
-		push_warning("Floor 1 checkpoint write failed: %s" % error_string(error))
+		push_warning("Floor %d checkpoint write failed: %s" % [_run.floor_number, error_string(error)])
 		return "Checkpoint held in memory. Disk save failed."
 	return "Checkpoint saved."
 
@@ -445,8 +445,11 @@ func _interact() -> void:
 					_refresh_exploration("Sable joined the party.")
 			">":
 				if _run.escape(cell):
-					var result: String = _save()
-					_show_summary(result)
+					if _run.completed:
+						_show_summary(_save())
+					else:
+						_show_arrival()
+					return
 				else:
 					_refresh_exploration("Defeat %s first." % _run.boss_name())
 			_:
@@ -463,7 +466,7 @@ func _exploration_hint() -> String:
 		return "Use to recover equipment"
 	match _floor.terrain_at(site):
 		"D": return "Use to enter the safe room"
-		"d": return "Use to return to Floor 1"
+		"d": return "Use to return to Floor %d" % _run.floor_number
 		"B": return "Use to rest and treat wounds"
 		"F": return "Use to eat and restore HP"
 		"L": return "Use to save and open the pack"
@@ -512,7 +515,16 @@ func _enter_refuge() -> void:
 
 func _leave_refuge() -> void:
 	_run.leave_refuge()
-	_show_active_floor("Returned to Floor 1.")
+	_show_active_floor("Returned to Floor %d." % _run.floor_number)
+
+
+func _show_arrival() -> void:
+	var notice: String = "Reached Floor %d. %s" % [_run.floor_number, _save()]
+	_audio.play_cue(DungeonAudio.Cue.DOOR)
+	_fade.change_scene(func() -> void:
+		_hide_menu()
+		_show_active_floor(notice)
+	)
 
 
 func _save_refuge_action(message: String) -> String:
@@ -705,7 +717,8 @@ func _show_summary(notice: String = "") -> void:
 	detail += "\n\nSystem · " + _run.announcement
 	if not notice.is_empty():
 		detail += "\n\n" + notice
-	_present("Floor 1 cleared", detail, [CampaignMenu.choice("Return to save slots", _show_slots)], false)
+	_present("Floor %d cleared" % _run.floor_number, detail,
+		[CampaignMenu.choice("Return to save slots", _show_slots)], false)
 
 
 func _present(title: String, detail: String, choices: Array[Dictionary], dismissible: bool = true) -> void:

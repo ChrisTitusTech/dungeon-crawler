@@ -114,22 +114,6 @@ func test_checkpoint_overwrite_and_slot_isolation() -> void:
 	assert_true(loaded.achievements.has("First Blood"))
 	assert_false(loaded.floor.enemies.any(func(enemy: DungeonFloor.Enemy) -> bool: return enemy.home == foe.home))
 	assert_eq(CampaignSave.read(_directory, 2).seed, 84)
-	var older: Dictionary = CampaignRun.new(83, 1).snapshot()
-	for field: String in ["layout_version", "in_refuge", "refuge_player"]:
-		older.erase(field)
-	older.erase("announcement_event")
-	older.erase("seconds_left")
-	older["turns_left"] = 500
-	older["announcement"] = "Archived boss victory line."
-	older["boss_defeated"] = true
-	var renamed: CampaignRun = CampaignRun.restore(older)
-	assert_not_null(renamed)
-	if renamed != null:
-		assert_string_contains(renamed.announcement, "Sir Aldren")
-		assert_true(renamed.at_camp())
-		assert_eq(renamed.floor.size, Vector2i(77, 47))
-		assert_eq(renamed.floor.player, renamed.refuge_door)
-		assert_eq(renamed.seconds_left, 1800.0)
 	var invalid: Dictionary = loaded.snapshot()
 	invalid["inventory"] = {"unknown": 1}
 	assert_null(CampaignRun.restore(invalid))
@@ -278,8 +262,88 @@ func test_exit_requires_a_boss_victory_and_the_stairs() -> void:
 	assert_false(run.escape(stairs))
 	run.floor.player = stairs
 	assert_true(run.escape(stairs))
-	assert_true(run.completed)
+	assert_eq(run.floor_number, 2)
+	assert_false(run.completed)
 	assert_true(run.achievements.has("Still Standing"))
+
+
+func test_later_floors_have_connected_routes_and_their_own_bosses() -> void:
+	for number: int in [2, 3]:
+		var run := CampaignRun.new(42, number)
+		var floor_state: DungeonFloor = run.floor
+		var visited: Dictionary = _reachable(floor_state)
+		assert_true(visited.has(run.refuge_door))
+		assert_eq(floor_state.terrain_at(run.refuge_door), "D")
+		assert_true(visited.has(_find(floor_state, ">")))
+		for enemy: DungeonFloor.Enemy in floor_state.enemies:
+			assert_true(visited.has(enemy.cell))
+		assert_eq(floor_state.enemy_at(_find(floor_state, "b")).kind, DungeonFloor.EnemyKind.BOSS)
+
+
+func test_stairs_save_the_next_floor_and_the_final_clear() -> void:
+	var game: DungeonGame = GAME.instantiate() as DungeonGame
+	game.save_directory = _directory
+	add_child_autofree(game)
+	game._new_slot(1)
+	var member: BattleRules.Fighter = game._party[0]
+	member.hp = 12
+	member.injuries["arms"] = true
+	game._run.reputation["watch"] = 30
+	game._run.sponsor_contracts["lanternwrights"] = "active"
+	game._run.add_item("iron_blade")
+	assert_true(game._run.equip(member, "iron_blade"))
+	var heading: Label = game._menu.get_node("%Heading")
+	var choices: VBoxContainer = game._menu.get_node("%Choices")
+	var boss_names: Array[String] = ["Sir Aldren", "Marshal Ysra", "Lord Veyr"]
+	for number: int in range(1, 4):
+		var run: CampaignRun = game._run
+		var stairs: Vector2i = _find(run.floor, ">")
+		var boss: DungeonFloor.Enemy = run.floor.enemy_at(_find(run.floor, "b"))
+		run.seconds_left = 23.5
+		run.floor.encounter = boss
+		game._open_battle(boss.kind)
+		assert_eq(game._battle.rules.enemy.name, boss_names[number - 1])
+		game._close_battle(BattleRules.Outcome.WON)
+		run.floor.restore_checkpoint(stairs, 5, run.snapshot().enemies, [])
+		run.used_sites[Vector2i.ZERO] = true
+		run.fallen_gear[Vector2i.ZERO] = ["iron_blade"]
+		var party: Array = run.snapshot().party
+		var pack: Dictionary = run.inventory.duplicate()
+		var standing: Dictionary = run.reputation.duplicate()
+		game._interact()
+		var saved: Dictionary = CampaignSave.read(_directory, 1)
+		if number < CampaignRun.LAST_FLOOR:
+			assert_eq(saved.floor_number, number + 1)
+			assert_true(saved.in_refuge)
+			assert_false(saved.boss_defeated)
+			assert_eq(saved.turn, 0)
+			assert_eq(saved.seconds_left, 1800.0)
+			assert_eq(saved.party, party)
+			assert_eq(saved.inventory, pack)
+			assert_eq(saved.reputation, standing)
+			assert_eq(saved.sponsor_contracts["lanternwrights"], "fulfilled")
+			assert_true(saved.used_sites.is_empty())
+			assert_true(saved.fallen_gear.is_empty())
+			game._load_slot(1)
+			assert_eq(game._run.floor_number, number + 1)
+			assert_true(game._run.at_camp())
+			game._interact()
+			assert_same(game._floor, game._run.floor)
+			assert_eq(game._title.text, "Floor %d" % (number + 1))
+			game._update_floor_clock(1800.0)
+			var reload_button: Button = choices.get_child(0)
+			reload_button.pressed.emit()
+			assert_eq(game._run.floor_number, number + 1)
+			assert_eq(game._run.seconds_left, 1800.0)
+			game._interact()
+		else:
+			assert_true(saved.completed)
+			assert_eq(saved.floor_number, 3)
+			game._load_slot(1)
+			assert_eq(heading.text, "Floor 3 cleared")
+			assert_eq(game._run.seconds_left, 23.5)
+			assert_has(game._run.achievements, "Past the Regent")
+	await wait_process_frames(1)
 
 
 func test_truce_changes_enemy_behaviour_and_survives_a_checkpoint() -> void:

@@ -6,13 +6,19 @@ signal event_occurred(event: String)
 const CONTENT: CampaignContent = preload("res://data/floor_one_content.tres")
 const REFUGE_LAYOUT: DungeonLayout = preload("res://data/safe_room.tres")
 const FLOOR_TIME_SECONDS := 30 * 60
-const LEGACY_TURN_BUDGET := 720
 const PARTY_LIMIT := 4
 const BOSS_ID := "warden"
 const ENEMY_IDS := ["rat", "guard", BOSS_ID]
+const FLOOR_BOSSES := [BOSS_ID, "marshal", "regent"]
+const LAST_FLOOR := 3
+const LATER_LAYOUTS: Dictionary[int, DungeonLayout] = {
+	2: preload("res://data/floor_2_layout.tres"),
+	3: preload("res://data/floor_3_layout.tres"),
+}
 const WARNINGS := {30: "critical", 120: "urgent", 300: "warning"}
 
 var seed: int
+var floor_number: int
 var floor: DungeonFloor
 var refuge: DungeonFloor
 var refuge_door: Vector2i
@@ -31,24 +37,31 @@ var victories: int = 0
 var boss_defeated: bool = false
 var completed: bool = false
 var _announcement_event: String = "intro"
-var _layout_version: int
 var _in_refuge: bool = false
 
 
-func _init(floor_seed: int, layout_version: int = FloorOneGenerator.VERSION) -> void:
+func _init(floor_seed: int, starting_floor: int = 1) -> void:
 	seed = floor_seed
-	_layout_version = layout_version
-	var layout: DungeonLayout = FloorOneGenerator.legacy(seed) if layout_version == 1 else FloorOneGenerator.new().generate(seed)
-	floor = DungeonFloor.new(layout.rows, layout.safe_room)
-	refuge_door = layout.refuge_door
-	refuge = DungeonFloor.new(REFUGE_LAYOUT.rows)
+	floor_number = starting_floor
 	party = [CONTENT.make_fighter("rook"), CONTENT.make_fighter("mira")]
 	inventory = {"tonic": 4, "bandage": 2}
 	for faction: String in CONTENT.factions:
 		reputation[faction] = CONTENT.factions[faction].initial
-	_update_hostility()
 	event_occurred.connect(_on_show_event)
-	event_occurred.emit("intro")
+	_load_floor()
+
+
+func _load_floor() -> void:
+	var layout: DungeonLayout
+	if floor_number == 1:
+		layout = FloorOneGenerator.new().generate(seed)
+	else:
+		layout = LATER_LAYOUTS[floor_number]
+	floor = DungeonFloor.new(layout.rows, layout.safe_room)
+	refuge_door = layout.refuge_door
+	refuge = DungeonFloor.new(REFUGE_LAYOUT.rows)
+	_update_hostility()
+	event_occurred.emit("intro" if floor_number == 1 else "intro_%d" % floor_number)
 
 
 func at_camp() -> bool:
@@ -72,7 +85,11 @@ func leave_refuge() -> void:
 
 
 func boss_name() -> String:
-	return CONTENT.foes[BOSS_ID].name
+	return CONTENT.foes[enemy_id(DungeonFloor.EnemyKind.BOSS)].name
+
+
+func enemy_id(kind: DungeonFloor.EnemyKind) -> String:
+	return FLOOR_BOSSES[floor_number - 1] if kind == DungeonFloor.EnemyKind.BOSS else ENEMY_IDS[kind]
 
 
 func elapse_floor_time(seconds: float) -> void:
@@ -260,7 +277,8 @@ func settle_battle(enemy: DungeonFloor.Enemy, outcome: BattleRules.Outcome, poti
 	if outcome != BattleRules.Outcome.WON:
 		return
 
-	var reward: Dictionary = CONTENT.foes[ENEMY_IDS[enemy.kind]]
+	var foe_id: String = enemy_id(enemy.kind)
+	var reward: Dictionary = CONTENT.foes[foe_id]
 	for member: BattleRules.Fighter in party:
 		member.earn_experience(reward.xp)
 	add_item(reward.drop)
@@ -276,16 +294,31 @@ func settle_battle(enemy: DungeonFloor.Enemy, outcome: BattleRules.Outcome, poti
 	_fulfill_sponsors(used_tonic, used_skill)
 	if enemy.kind == DungeonFloor.EnemyKind.BOSS:
 		boss_defeated = true
-		event_occurred.emit("warden")
+		event_occurred.emit(foe_id)
 
 
 func escape(exit_cell: Vector2i) -> bool:
 	var distance: Vector2i = (floor.player - exit_cell).abs()
-	if not boss_defeated or completed or distance.x + distance.y > 1 or floor.terrain_at(exit_cell) != ">":
+	if not boss_defeated or completed or at_camp() or floor.encounter != null or seconds_left <= 0.0:
 		return false
-	completed = true
-	event_occurred.emit("escape")
+	if distance.x + distance.y > 1 or floor.terrain_at(exit_cell) != ">":
+		return false
+	event_occurred.emit("escape" if floor_number == 1 else "escape_%d" % floor_number)
+	if floor_number == LAST_FLOOR:
+		completed = true
+	else:
+		_advance_floor()
 	return true
+
+
+func _advance_floor() -> void:
+	floor_number += 1
+	boss_defeated = false
+	seconds_left = FLOOR_TIME_SECONDS
+	used_sites.clear()
+	fallen_gear.clear()
+	_in_refuge = true
+	_load_floor()
 
 
 func snapshot() -> Dictionary:
@@ -301,67 +334,51 @@ func snapshot() -> Dictionary:
 			"weapon": member.weapon, "armor": member.armor, "injuries": member.injuries.duplicate(),
 		})
 	return {
-		"seed": seed, "player": floor.player, "turn": floor.turn, "seconds_left": seconds_left,
-		"layout_version": _layout_version, "in_refuge": _in_refuge, "refuge_player": refuge.player,
+		"seed": seed, "floor_number": floor_number, "player": floor.player,
+		"turn": floor.turn, "seconds_left": seconds_left,
+		"in_refuge": _in_refuge, "refuge_player": refuge.player,
 		"enemies": enemies, "explored": floor.explored.keys(), "party": members,
 		"inventory": inventory.duplicate(), "used_sites": used_sites.duplicate(),
 		"reputation": reputation.duplicate(),
 		"sponsor_contracts": sponsor_contracts.duplicate(),
 		"fallen_gear": fallen_gear.duplicate(true), "achievements": achievements.duplicate(),
-		"announcement": announcement, "announcement_event": _announcement_event, "victories": victories,
+		"announcement_event": _announcement_event, "victories": victories,
 		"boss_defeated": boss_defeated, "completed": completed,
 	}
 
 
 static func restore(data: Dictionary) -> CampaignRun:
 	var fields := {
-		"seed": TYPE_INT, "player": TYPE_VECTOR2I, "turn": TYPE_INT,
+		"seed": TYPE_INT, "floor_number": TYPE_INT, "player": TYPE_VECTOR2I, "turn": TYPE_INT,
+		"in_refuge": TYPE_BOOL, "refuge_player": TYPE_VECTOR2I,
 		"enemies": TYPE_DICTIONARY, "explored": TYPE_ARRAY, "party": TYPE_ARRAY,
 		"inventory": TYPE_DICTIONARY, "used_sites": TYPE_DICTIONARY, "fallen_gear": TYPE_DICTIONARY,
-		"achievements": TYPE_PACKED_STRING_ARRAY, "announcement": TYPE_STRING,
+		"reputation": TYPE_DICTIONARY, "sponsor_contracts": TYPE_DICTIONARY,
+		"achievements": TYPE_PACKED_STRING_ARRAY, "announcement_event": TYPE_STRING,
 		"victories": TYPE_INT, "boss_defeated": TYPE_BOOL, "completed": TYPE_BOOL,
 	}
 	if not _matches(data, fields) or data.party.is_empty() or data.party.size() > PARTY_LIMIT:
 		return null
 	var saved_time: Variant = data.get("seconds_left")
-	if not data.has("seconds_left"):
-		var legacy_turns: Variant = data.get("turns_left")
-		if not legacy_turns is int or legacy_turns <= 0 or legacy_turns > LEGACY_TURN_BUDGET:
-			return null
-		# Old checkpoints had no elapsed time to restore.
-		saved_time = FLOOR_TIME_SECONDS
 	if not (saved_time is float or saved_time is int) or not is_finite(saved_time) or saved_time <= 0 or saved_time > FLOOR_TIME_SECONDS:
 		return null
-
-	var layout_version: Variant = data.get("layout_version", 1)
-	if not layout_version is int or layout_version not in [1, FloorOneGenerator.VERSION]:
+	if data.floor_number < 1 or data.floor_number > LAST_FLOOR or not CONTENT.show.has(data.announcement_event):
 		return null
-	var run := CampaignRun.new(data.seed, layout_version)
-	var saved_contracts: Variant = data.get("sponsor_contracts", {})
-	if not saved_contracts is Dictionary:
+	if data.completed and (data.floor_number != LAST_FLOOR or not data.boss_defeated or data.in_refuge):
 		return null
+	var run := CampaignRun.new(data.seed, data.floor_number)
+	var saved_contracts: Dictionary = data.sponsor_contracts
 	for sponsor: Variant in saved_contracts:
 		if not CONTENT.sponsors.has(sponsor) or saved_contracts[sponsor] not in ["active", "fulfilled"]:
 			return null
 		run.sponsor_contracts[sponsor] = saved_contracts[sponsor]
-	var standing: Variant = data.get("reputation", {})
-	if not standing is Dictionary:
-		return null
+	var standing: Dictionary = data.reputation
 	for faction: Variant in standing:
 		if not CONTENT.factions.has(faction) or not standing[faction] is int or absi(standing[faction]) > 100:
 			return null
 		run.reputation[faction] = standing[faction]
-	if not run.floor.is_walkable(data.player):
+	if not run.floor.is_walkable(data.player) or not run.refuge.is_walkable(data.refuge_player):
 		return null
-	var camp_state: Variant = data.get("in_refuge", layout_version == 1 and not data.completed)
-	var camp_cell: Variant = data.get("refuge_player", run.refuge.player)
-	if not camp_state is bool or not camp_cell is Vector2i or not run.refuge.is_walkable(camp_cell):
-		return null
-	var dungeon_cell: Vector2i = data.player
-	if not data.has("in_refuge") and layout_version == 1 and not data.completed:
-		if not run.floor.safe_room.has_point(dungeon_cell):
-			return null
-		dungeon_cell = run.refuge_door
 	for cell: Variant in data.explored:
 		if not cell is Vector2i or not Rect2i(Vector2i.ZERO, run.floor.size).has_point(cell):
 			return null
@@ -373,9 +390,9 @@ static func restore(data: Dictionary) -> CampaignRun:
 			return null
 	if data.turn < 0:
 		return null
-	run.floor.restore_checkpoint(dungeon_cell, data.turn, data.enemies, data.explored)
-	run.refuge.restore_checkpoint(camp_cell, 0, {}, [])
-	run._in_refuge = camp_state
+	run.floor.restore_checkpoint(data.player, data.turn, data.enemies, data.explored)
+	run.refuge.restore_checkpoint(data.refuge_player, 0, {}, [])
+	run._in_refuge = data.in_refuge
 	run.party.clear()
 	var member_fields := {
 		"id": TYPE_STRING, "hp": TYPE_INT, "max_hp": TYPE_INT, "power": TYPE_INT,
@@ -405,28 +422,13 @@ static func restore(data: Dictionary) -> CampaignRun:
 	run.used_sites.assign(data.used_sites)
 	run.fallen_gear.assign(data.fallen_gear)
 	run.achievements = data.achievements.duplicate()
-	run._announcement_event = _saved_announcement_event(data)
-	if not data.has("seconds_left") and WARNINGS.values().has(run._announcement_event):
-		run._announcement_event = "warden" if data.boss_defeated else "intro"
+	run._announcement_event = data.announcement_event
 	run.seconds_left = saved_time
 	run.victories = data.victories
 	run.boss_defeated = data.boss_defeated
 	run.completed = data.completed
 	run._update_hostility()
 	return run
-
-
-static func _saved_announcement_event(data: Dictionary) -> String:
-	var stored: Variant = data.get("announcement_event")
-	if stored is String and CONTENT.show.has(stored):
-		return stored
-	# Older checkpoints stored the written line instead of an event key.
-	for event: String in CONTENT.show:
-		if CONTENT.show[event].line == data.announcement:
-			return event
-	if data.completed:
-		return "escape"
-	return "warden" if data.boss_defeated else "intro"
 
 
 static func _matches(data: Dictionary, fields: Dictionary) -> bool:
@@ -442,7 +444,7 @@ func _shift_reputation(faction: String, amount: int) -> void:
 
 func _update_hostility() -> void:
 	for enemy: DungeonFloor.Enemy in floor.enemies:
-		var faction: String = CONTENT.foes[ENEMY_IDS[enemy.kind]].faction
+		var faction: String = CONTENT.foes[enemy_id(enemy.kind)].faction
 		enemy.hostile = enemy.kind == DungeonFloor.EnemyKind.BOSS or not has_truce(faction)
 
 
