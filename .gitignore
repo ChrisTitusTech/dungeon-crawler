@@ -1,0 +1,19 @@
+# Godot 4
+.godot/
+.nomedia
+*.translation
+export_credentials.cfg
+
+# Export output
+build/
+export/
+*.pck
+*.exe
+*.x86_64
+
+# Editor and OS
+.vscode/
+.idea/
+*.tmp
+.DS_Store
+Thumbs.db

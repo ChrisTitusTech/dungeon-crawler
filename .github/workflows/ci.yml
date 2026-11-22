@@ -1,0 +1,72 @@
+name: Godot CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GODOT_VERSION: '4.7.2'
+      GODOT_EDITOR_SHA256: cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4
+      GODOT_TEMPLATES_SHA256: f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011
+    steps:
+      - name: Check out project
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: true
+          persist-credentials: false
+
+      - name: Install pinned Godot editor
+        shell: bash
+        run: |
+          release_url="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          editor="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          cd "$RUNNER_TEMP"
+          curl --fail --location --retry 3 --output "${editor}.zip" "$release_url/${editor}.zip"
+          echo "$GODOT_EDITOR_SHA256  ${editor}.zip" | sha256sum --check
+          unzip -q "${editor}.zip"
+          install -Dm755 "$editor" "$RUNNER_TEMP/bin/godot"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Import and test
+        shell: bash
+        run: |
+          godot --version
+          godot --headless --import
+          godot --headless --script res://addons/gut/gut_cmdln.gd -gexit
+
+      - name: Install release templates
+        shell: bash
+        run: |
+          release_url="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          cd "$RUNNER_TEMP"
+          curl --fail --location --retry 3 --output templates.tpz "$release_url/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          echo "$GODOT_TEMPLATES_SHA256  templates.tpz" | sha256sum --check
+          mkdir -p "$template_dir"
+          unzip -jq templates.tpz templates/version.txt templates/linux_release.x86_64 templates/windows_release_x86_64.exe -d "$template_dir"
+
+      - name: Build Windows and Linux releases
+        shell: bash
+        run: |
+          mkdir -p build/windows build/linux
+          godot --headless --export-release 'Windows Desktop' build/windows/dungeon-crawler.exe
+          godot --headless --export-release Linux build/linux/dungeon-crawler.x86_64
+          ./build/linux/dungeon-crawler.x86_64 --headless --quit-after 2
+          tar -czf build/dungeon-crawler-linux.tar.gz -C build/linux .
+          (cd build/windows && zip -q ../dungeon-crawler-windows.zip ./*)
+
+      - name: Upload builds
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dungeon-crawler-builds
+          path: |
+            build/dungeon-crawler-linux.tar.gz
+            build/dungeon-crawler-windows.zip
+          if-no-files-found: error

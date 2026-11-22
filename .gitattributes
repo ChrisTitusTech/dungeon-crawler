@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+# Audio and source art go through Git LFS. Exported 16x16 PNG sprites are small and stay in Git.
+*.wav filter=lfs diff=lfs merge=lfs -text
+*.ogg filter=lfs diff=lfs merge=lfs -text
+*.mp3 filter=lfs diff=lfs merge=lfs -text
+*.aseprite filter=lfs diff=lfs merge=lfs -text
+*.psd filter=lfs diff=lfs merge=lfs -text
+
+*.png binary
+*.ttf binary
+*.otf binary
