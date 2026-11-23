@@ -130,12 +130,9 @@ func _choose(command: BattleRules.Command) -> void:
 func _enemy_turn() -> void:
 	if _controls_held or _animating or rules.current_fighter() != rules.enemy:
 		return
-	var target: BattleRules.Fighter = rules.enemy_target()
-	if target == null:
-		return
-	var previous_hp: int = target.hp
-	rules.take_enemy_turn()
-	_present_action(BattleRules.Command.ATTACK, rules.enemy, target, previous_hp)
+	var hit: BattleRules.EnemyHit = rules.take_enemy_turn()
+	if hit != null:
+		_present_action(BattleRules.Command.ATTACK, rules.enemy, hit.target, hit.previous_hp)
 
 
 func _finish() -> void:

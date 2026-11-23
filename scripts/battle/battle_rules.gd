@@ -65,6 +65,15 @@ class Fighter:
 		return true
 
 
+class EnemyHit:
+	var target: Fighter
+	var previous_hp: int
+
+	func _init(member: Fighter) -> void:
+		target = member
+		previous_hp = member.hp
+
+
 const POTION_HEAL := 9
 const SKILL_COOLDOWN_TURNS := 10
 
@@ -80,12 +89,16 @@ var _turn_index: int = 0
 var _enemy_actions: int = 0
 var _completed_turns: int = 0
 var _skill_ready_after: Dictionary[Fighter, int] = {}
+var _recent_impact: Dictionary[Fighter, int] = {}
+var _last_enemy_target: Fighter
+var _target_random := RandomNumberGenerator.new()
 
 
 func _init(members: Array[Fighter], opponent: Fighter, supplies: int) -> void:
 	party = members
 	enemy = opponent
 	potions = supplies
+	_target_random.randomize()
 	_initiative = party.duplicate()
 	_initiative.append(enemy)
 	for fighter: Fighter in _initiative:
@@ -140,13 +153,15 @@ func use_command(command: Command) -> bool:
 	if actor == null or actor == enemy:
 		return false
 
+	var previous_enemy_hp: int = enemy.hp
+	var healed: int = 0
 	match command:
 		Command.ATTACK:
 			_hit(actor, enemy)
 		Command.SKILL:
 			if not can_use_skill(actor):
 				return false
-			_use_skill(actor)
+			healed = _use_skill(actor)
 		Command.DEFEND:
 			actor.guarding = true
 			_log("%s braces for the next hit." % actor.name)
@@ -155,19 +170,22 @@ func use_command(command: Command) -> bool:
 			if potions <= 0 or target == null:
 				return false
 			potions -= 1
-			var healed: int = mini(POTION_HEAL, target.max_hp - target.hp)
+			healed = mini(POTION_HEAL, target.max_hp - target.hp)
 			target.hp += healed
 			_log("%s gives %s a tonic for %d HP." % [actor.name, target.name, healed])
 		Command.FLEE:
 			outcome = Outcome.FLED
 			_log("The party escapes.")
 			return true
+	var impact: int = previous_enemy_hp - enemy.hp + healed
+	if impact > 0:
+		_recent_impact[actor] = _recent_impact.get(actor, 0) + impact
 	_completed_turns += 1
 	_finish_action()
 	return true
 
 
-func _use_skill(actor: Fighter) -> void:
+func _use_skill(actor: Fighter) -> int:
 	# The cooldown starts after the turn spent using the skill.
 	_skill_ready_after[actor] = _completed_turns + 1 + SKILL_COOLDOWN_TURNS
 	used_skill = true
@@ -186,25 +204,43 @@ func _use_skill(actor: Fighter) -> void:
 			var restored: int = mini(healing, ally.max_hp - ally.hp)
 			ally.hp += restored
 			_log("%s restores %d HP to %s." % [actor.name, restored, ally.name])
+			return restored
+	return 0
 
 
-func take_enemy_turn() -> void:
+func take_enemy_turn() -> EnemyHit:
 	if current_fighter() != enemy:
-		return
-	var target: Fighter = enemy_target()
-	if target != null:
-		_enemy_actions += 1
-		var wound: String = enemy.wound if _enemy_actions % 2 == 0 else ""
-		_hit(enemy, target, 0, wound)
-		_completed_turns += 1
-		_finish_action()
+		return null
+	var target: Fighter = _pick_enemy_target()
+	if target == null:
+		return null
+	var hit := EnemyHit.new(target)
+	_enemy_actions += 1
+	var wound: String = enemy.wound if _enemy_actions % 2 == 0 else ""
+	_hit(enemy, target, 0, wound)
+	_last_enemy_target = target
+	_recent_impact.clear()
+	_completed_turns += 1
+	_finish_action()
+	return hit
 
 
-func enemy_target() -> Fighter:
+func _pick_enemy_target() -> Fighter:
+	var candidates: Array[Fighter] = []
+	var weights := PackedFloat32Array()
 	for member: Fighter in party:
-		if member.hp > 0:
-			return member
-	return null
+		if member.hp <= 0:
+			continue
+		var injury_pressure: float = 5.0 * (1.0 - float(member.hp) / member.max_hp)
+		var recent_impact: float = minf(12.0, 0.6 * _recent_impact.get(member, 0))
+		var weight: float = 10.0 + injury_pressure + recent_impact
+		if member.guarding:
+			weight *= 0.55
+		if member == _last_enemy_target:
+			weight *= 0.5
+		candidates.append(member)
+		weights.append(weight)
+	return null if candidates.is_empty() else candidates[_target_random.rand_weighted(weights)]
 
 
 func _hit(attacker: Fighter, target: Fighter, bonus: int = 0, wound: String = "") -> void:

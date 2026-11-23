@@ -700,7 +700,7 @@ func test_ancestry_traits_apply_on_floor_three_and_after_reload() -> void:
 			var rook: BattleRules.Fighter = restored.party[0]
 			assert_true(restored.equip(rook, "hide_coat"))
 			var foe: BattleRules.Fighter = CampaignRun.CONTENT.make_fighter("spider")
-			var battle := BattleRules.new(restored.party, foe, 0)
+			var battle := BattleRules.new([rook], foe, 0)
 			battle.take_enemy_turn()
 			assert_eq(rook.max_hp - rook.hp, 6, "Scales and worn armor both absorb damage.")
 

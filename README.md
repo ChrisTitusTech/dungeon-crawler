@@ -52,6 +52,8 @@ The expanded floors use a new checkpoint format. Choose **Replace slot** to star
 
 Movement follows the diagonal tile edges of the isometric view. Hold a direction for continuous movement. Battles place the party on the right and the enemy on the left in a torchlit vault.
 
+Enemies are more likely to strike party members at low health or anyone who recently dealt damage or healed. Guarding and taking the last enemy hit make a party member less likely to be targeted next.
+
 The game opens in a 1280×720 window. Exploration uses drawn stonework and articulated characters, and battles use a 1672×941 arena backdrop. Heroes, pets, and monsters animate in both views.
 
 Open **Settings** from the save-slot screen or pause menu to adjust music, effects, and accessibility. **Reduced motion** skips scene fades, camera slides, and animated battle feedback. **One tile per press** turns off held movement. Both options apply immediately and are saved between sessions.
