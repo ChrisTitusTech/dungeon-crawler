@@ -10,7 +10,6 @@ Your party must survive an 18-floor dungeon run by a snarky System AI. Explore i
 
 ## Documentation
 
-- [PC handoff](docs/handoff.md) covers cloning, restoring local saves, and picking up Milestone 3.
 - [Game design](docs/game-design.md) describes the game and its systems.
 - [Technical design](docs/technical-design.md) explains the architecture and project layout.
 - [Roadmap](docs/roadmap.md) tracks milestones and open work.
