@@ -522,6 +522,77 @@ func test_truce_changes_enemy_behaviour_and_survives_a_checkpoint() -> void:
 		assert_false(restored.floor.enemy_at(sentinel.cell).hostile)
 
 
+func test_rival_patrols_change_outpost_control_and_keep_wounds_after_reload() -> void:
+	var run := CampaignRun.new(42)
+	var post: Vector2i = _find(run.floor, "T")
+	var rat_cell: Vector2i = post + Vector2i(2, 1)
+	var watch_cell: Vector2i = post + Vector2i(3, 1)
+	var positions := {rat_cell: rat_cell, watch_cell: watch_cell}
+	run.floor.restore_checkpoint(post, 0, positions, [])
+	assert_has(run.floor.outpost_factions(post), "ashfang")
+	assert_has(run.floor.outpost_factions(post), "watch")
+	assert_true(run.floor.take_turn())
+	assert_eq(run.floor.skirmish.size(), 2)
+
+	var restored: CampaignRun = CampaignRun.restore(run.snapshot())
+	assert_not_null(restored)
+	if restored == null:
+		return
+	assert_eq(restored.floor.enemy_at(watch_cell).skirmish_wounds, 1)
+	assert_true(restored.floor.take_turn())
+	assert_null(restored.floor.enemy_at(rat_cell))
+	assert_eq(restored.floor.outpost_factions(post), PackedStringArray(["watch"]))
+	assert_eq(restored.victories, 0)
+
+	var game: DungeonGame = GAME.instantiate() as DungeonGame
+	add_child_autofree(game)
+	game._open_run(restored)
+	restored.floor.encounter = restored.floor.enemy_at(watch_cell)
+	game._open_battle(DungeonFloor.EnemyKind.GUARD)
+	assert_eq(game._battle.rules.enemy.hp, game._battle.rules.enemy.max_hp - 8)
+	await wait_process_frames(1)
+
+
+func test_watch_scouting_job_pays_once_after_the_party_returns() -> void:
+	var game: DungeonGame = GAME.instantiate() as DungeonGame
+	game.save_directory = _directory
+	add_child_autofree(game)
+	game._new_slot(1)
+	var run: CampaignRun = game._run
+	var previous: Dictionary = run.snapshot()
+	previous.erase("watch_job")
+	previous.erase("skirmish_wounds")
+	assert_not_null(CampaignRun.restore(previous), "Existing checkpoints can take the job.")
+	game._interact()
+	game._show_envoy()
+	var choices: VBoxContainer = game._menu.get_node("%Choices")
+	var accept: Button = choices.get_child(1)
+	assert_eq(accept.text, "Accept scouting job")
+	accept.pressed.emit()
+	assert_eq(CampaignSave.read(_directory, 1).watch_job, CampaignRun.WatchJob.SCOUTING)
+	game._hide_menu()
+	game._leave_refuge()
+	var post: Vector2i = _find(run.floor, "T")
+	var positions: Dictionary = run.snapshot().enemies
+	run.floor.restore_checkpoint(post, 0, positions, [])
+	game._interact()
+	assert_eq(run.watch_job, CampaignRun.WatchJob.REPORT_READY)
+	assert_false(run.report_watch_job(), "The envoy pays at the refuge.")
+	game._hide_menu()
+	run.floor.restore_checkpoint(run.refuge_door, 0, positions, [])
+	game._interact()
+	game._load_slot(1)
+	game._show_envoy()
+	var report: Button = choices.get_child(1)
+	assert_eq(report.text, "Turn in scouting report")
+	report.pressed.emit()
+	assert_eq(game._run.count("bronze_box"), 1)
+	assert_eq(game._run.reputation["watch"], -10)
+	assert_eq(CampaignSave.read(_directory, 1).watch_job, CampaignRun.WatchJob.PAID)
+	assert_false(game._run.report_watch_job())
+	await wait_process_frames(1)
+
+
 func test_recipes_consume_materials_and_produce_usable_equipment() -> void:
 	var run := CampaignRun.new(83)
 	run.add_item("iron_blade")

@@ -3,6 +3,8 @@ extends RefCounted
 
 signal event_occurred(event: String)
 
+enum WatchJob { AVAILABLE, SCOUTING, REPORT_READY, PAID, MISSED }
+
 const CONTENT: CampaignContent = preload("res://data/floor_one_content.tres")
 const REFUGE_LAYOUT: DungeonLayout = preload("res://data/safe_room.tres")
 const FLOOR_TIME_SECONDS := 30 * 60
@@ -11,6 +13,8 @@ const PET_ID := "cinder"
 const BOSS_ID := "warden"
 const ENEMY_IDS := ["rat", "guard", BOSS_ID, "goblin", "slime", "spider", "skeleton", "mimic", "gargoyle"]
 const FLOOR_BOSSES := [BOSS_ID, "marshal", "regent"]
+const OUTPOSTS := ["Latchknife Outpost", "Gallery Gatepost", "Tithe Barracks"]
+const SCOUTING_REWARD_STANDING := 8
 const LAST_FLOOR := 3
 const LATER_LAYOUTS: Dictionary[int, DungeonLayout] = {
 	2: preload("res://data/floor_2_layout.tres"),
@@ -27,6 +31,7 @@ var party: Array[BattleRules.Fighter] = []
 var inventory: Dictionary[String, int] = {}
 var reputation: Dictionary[String, int] = {}
 var sponsor_contracts: Dictionary[String, String] = {}
+var watch_job := WatchJob.AVAILABLE
 var used_sites: Dictionary[Vector2i, bool] = {}
 var fallen_gear: Dictionary[Vector2i, Array] = {}
 var achievements := PackedStringArray()
@@ -141,6 +146,33 @@ func offer_faction_gift(faction: String) -> bool:
 		return false
 	spend_item(definition.gift, definition.gift_cost)
 	_shift_reputation(faction, definition.gift_standing)
+	_update_hostility()
+	return true
+
+
+func accept_watch_job() -> bool:
+	if not at_camp() or floor_number != 1 or watch_job != WatchJob.AVAILABLE:
+		return false
+	watch_job = WatchJob.SCOUTING
+	return true
+
+
+func survey_outpost(cell: Vector2i) -> bool:
+	var distance: Vector2i = (floor.player - cell).abs()
+	if at_camp() or floor_number != 1 or watch_job != WatchJob.SCOUTING or distance.x + distance.y > 1:
+		return false
+	if floor.terrain_at(cell) != "T" or floor.encounter != null:
+		return false
+	watch_job = WatchJob.REPORT_READY
+	return true
+
+
+func report_watch_job() -> bool:
+	if not at_camp() or watch_job != WatchJob.REPORT_READY:
+		return false
+	watch_job = WatchJob.PAID
+	add_item("bronze_box")
+	_shift_reputation("watch", SCOUTING_REWARD_STANDING)
 	_update_hostility()
 	return true
 
@@ -386,6 +418,8 @@ func escape(exit_cell: Vector2i, choice_id: String = "") -> bool:
 
 
 func _advance_floor() -> void:
+	if floor_number == 1 and watch_job in [WatchJob.AVAILABLE, WatchJob.SCOUTING]:
+		watch_job = WatchJob.MISSED
 	floor_number += 1
 	boss_defeated = false
 	seconds_left = FLOOR_TIME_SECONDS
@@ -397,8 +431,11 @@ func _advance_floor() -> void:
 
 func snapshot() -> Dictionary:
 	var enemies := {}
+	var skirmish_wounds := {}
 	for enemy: DungeonFloor.Enemy in floor.enemies:
 		enemies[enemy.home] = enemy.cell
+		if enemy.skirmish_wounds > 0:
+			skirmish_wounds[enemy.home] = enemy.skirmish_wounds
 	var members: Array[Dictionary] = []
 	for member: BattleRules.Fighter in party:
 		members.append({
@@ -412,6 +449,7 @@ func snapshot() -> Dictionary:
 		"turn": floor.turn, "seconds_left": seconds_left,
 		"in_refuge": _in_refuge, "refuge_player": refuge.player,
 		"enemies": enemies, "explored": floor.explored.keys(), "party": members,
+		"skirmish_wounds": skirmish_wounds, "watch_job": watch_job,
 		"inventory": inventory.duplicate(), "used_sites": used_sites.duplicate(),
 		"reputation": reputation.duplicate(),
 		"sponsor_contracts": sponsor_contracts.duplicate(),
@@ -449,6 +487,11 @@ static func restore(data: Dictionary) -> CampaignRun:
 	if (data.completed and not has_class) or (not data.completed and data.class_id != ""):
 		return null
 	var run := CampaignRun.new(data.seed, data.floor_number)
+	var saved_job: Variant = data.get("watch_job", WatchJob.AVAILABLE if data.floor_number == 1 else WatchJob.MISSED)
+	var wounds: Variant = data.get("skirmish_wounds", {})
+	if not saved_job is int or not WatchJob.values().has(saved_job) or not wounds is Dictionary:
+		return null
+	run.watch_job = saved_job
 	run.race_id = data.race_id
 	var race: Dictionary = CONTENT.races.get(run.race_id, {})
 	run.floor.sight_radius += race.get("sight", 0)
@@ -476,6 +519,11 @@ static func restore(data: Dictionary) -> CampaignRun:
 	if data.turn < 0:
 		return null
 	run.floor.restore_checkpoint(data.player, data.turn, data.enemies, data.explored)
+	for enemy: DungeonFloor.Enemy in run.floor.enemies:
+		var hits: Variant = wounds.get(enemy.home, 0)
+		if not hits is int or hits < 0 or hits >= enemy.endurance:
+			return null
+		enemy.skirmish_wounds = hits
 	run.refuge.restore_checkpoint(data.refuge_player, 0, {}, [])
 	run._in_refuge = data.in_refuge
 	run.party.clear()
@@ -535,8 +583,11 @@ func _shift_reputation(faction: String, amount: int) -> void:
 
 func _update_hostility() -> void:
 	for enemy: DungeonFloor.Enemy in floor.enemies:
-		var faction: String = CONTENT.foes[enemy_id(enemy.kind)].faction
-		enemy.hostile = enemy.kind == DungeonFloor.EnemyKind.BOSS or not has_truce(faction)
+		var foe: Dictionary = CONTENT.foes[enemy_id(enemy.kind)]
+		enemy.faction = foe.faction
+		enemy.rival = CONTENT.factions[enemy.faction].rival
+		enemy.endurance = maxi(2, ceili(foe.hp / 12.0))
+		enemy.hostile = enemy.kind == DungeonFloor.EnemyKind.BOSS or not has_truce(enemy.faction)
 
 
 func _fulfill_sponsors(used_tonic: bool, used_skill: bool) -> void:

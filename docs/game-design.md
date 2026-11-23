@@ -87,6 +87,8 @@ Milestone 2 is complete. Rook and Mira can recruit Sable, return through a dunge
 ## Factions
 
 - On Floor 1, the Ashfang Brood and Barrow Watch are rivals. Hunting Ashfang beasts improves Watch standing, and the Watch envoy accepts bandages. Sentinels yield the way and patrol peacefully once a truce is earned. Sir Aldren guards the stairs independently of the truce.
+- The Watch envoy offers a job to scout the Latchknife Outpost on Floor 1. Returning with the report grants a bronze box and increases Watch standing.
+- Outpost banners report which patrols hold or contest local territory. Adjacent rival patrols can skirmish in sight of the party. Survivors carry their wounds into later encounters.
 - Each floor hosts two to four factions (monster tribes, adventuring companies, dungeon wardens) with a relation matrix toward each other and the party.
 - Reputation changes through kills, quests, gifts, and betrayals. It controls hostility, shop access, recruits, and some quest lines.
 - Factions act on the map: they hold territory, patrol, and fight rivals, so the floor changes while the player explores.

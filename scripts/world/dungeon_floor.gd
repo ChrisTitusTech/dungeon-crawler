@@ -9,6 +9,10 @@ class Enemy:
 	var home: Vector2i
 	var patrol_end: Vector2i
 	var hostile: bool = true
+	var faction: String
+	var rival: String
+	var endurance: int = 2
+	var skirmish_wounds: int
 
 	func _init(enemy_kind: EnemyKind, spawn: Vector2i) -> void:
 		kind = enemy_kind
@@ -19,6 +23,9 @@ class Enemy:
 
 const SIGHT_RADIUS := 7
 const CHASE_RADIUS := 6
+const SKIRMISH_RADIUS_SQUARED := 36
+const STATIONARY := [EnemyKind.BOSS, EnemyKind.MIMIC, EnemyKind.GARGOYLE]
+const OUTPOST_RADIUS_SQUARED := 25
 const SPAWNS: Dictionary[String, EnemyKind] = {
 	"r": EnemyKind.RAT, "g": EnemyKind.GUARD, "b": EnemyKind.BOSS,
 	"k": EnemyKind.GOBLIN, "o": EnemyKind.SLIME, "s": EnemyKind.SPIDER,
@@ -36,6 +43,7 @@ var enemies: Array[Enemy] = []
 var encounter: Enemy
 var visible: Dictionary[Vector2i, bool] = {}
 var explored: Dictionary[Vector2i, bool] = {}
+var skirmish: Array[Enemy] = []
 
 var _rows: PackedStringArray
 var _reprieved_enemy: Enemy
@@ -99,10 +107,12 @@ func take_turn(direction: Vector2i = Vector2i.ZERO) -> bool:
 		occupant = null
 
 	turn += 1
+	skirmish.clear()
 	encounter = occupant
 	if encounter == null:
 		player = destination
-		_advance_enemies()
+		var fighting: Dictionary[Enemy, bool] = _resolve_skirmishes()
+		_advance_enemies(fighting)
 		_update_visibility()
 	_reprieved_enemy = null
 	return true
@@ -119,6 +129,7 @@ func resolve_encounter(won: bool) -> void:
 func restore_checkpoint(position: Vector2i, steps: int, positions: Dictionary, visited: Array) -> void:
 	player = position
 	turn = steps
+	skirmish.clear()
 	for index: int in range(enemies.size() - 1, -1, -1):
 		var enemy: Enemy = enemies[index]
 		if positions.has(enemy.home):
@@ -131,9 +142,53 @@ func restore_checkpoint(position: Vector2i, steps: int, positions: Dictionary, v
 	_update_visibility()
 
 
-func _advance_enemies() -> void:
+func outpost_factions(post: Vector2i) -> PackedStringArray:
+	var factions := PackedStringArray()
 	for enemy: Enemy in enemies:
-		if enemy == _reprieved_enemy or enemy.kind in [EnemyKind.BOSS, EnemyKind.MIMIC, EnemyKind.GARGOYLE]:
+		if enemy.faction.is_empty() or enemy.kind in STATIONARY or factions.has(enemy.faction):
+			continue
+		if post.distance_squared_to(enemy.cell) <= OUTPOST_RADIUS_SQUARED and _has_line_of_sight(post, enemy.cell):
+			factions.append(enemy.faction)
+	return factions
+
+
+func _resolve_skirmishes() -> Dictionary[Enemy, bool]:
+	var fighting: Dictionary[Enemy, bool] = {}
+	var defeated: Array[Enemy] = []
+	for enemy: Enemy in enemies:
+		if fighting.has(enemy) or not _can_skirmish(enemy):
+			continue
+		for direction: Vector2i in CARDINALS:
+			var other: Enemy = enemy_at(enemy.cell + direction)
+			if other == null or fighting.has(other) or not _can_skirmish(other) or not _are_rivals(enemy, other):
+				continue
+			fighting[enemy] = true
+			fighting[other] = true
+			if skirmish.is_empty():
+				skirmish = [enemy, other]
+			for fighter: Enemy in [enemy, other]:
+				fighter.skirmish_wounds += 1
+				if fighter.skirmish_wounds >= fighter.endurance:
+					defeated.append(fighter)
+			break
+	for enemy: Enemy in defeated:
+		enemies.erase(enemy)
+	return fighting
+
+
+func _can_skirmish(enemy: Enemy) -> bool:
+	return (not enemy.faction.is_empty() and enemy.kind not in STATIONARY and enemy != _reprieved_enemy
+		and player.distance_squared_to(enemy.cell) <= SKIRMISH_RADIUS_SQUARED
+		and _has_line_of_sight(player, enemy.cell))
+
+
+func _are_rivals(enemy: Enemy, other: Enemy) -> bool:
+	return enemy.rival == other.faction or other.rival == enemy.faction
+
+
+func _advance_enemies(fighting: Dictionary[Enemy, bool]) -> void:
+	for enemy: Enemy in enemies:
+		if enemy == _reprieved_enemy or enemy.kind in STATIONARY or fighting.has(enemy):
 			continue
 
 		var goal: Vector2i = enemy.patrol_end if enemy.cell == enemy.home else enemy.home

@@ -35,6 +35,8 @@ var _stone_color: Color = STONE_COLORS[0]
 var _torch_glow: GradientTexture2D
 var _ambient_frame: int
 var _party_facing: float = 1.0
+var _clash_turn: int = -1
+var _clash_started: float
 
 
 func _ready() -> void:
@@ -60,6 +62,7 @@ func load_floor(floor_state: DungeonFloor, party: Array[BattleRules.Fighter], ca
 	if campaign != null and not campaign.at_camp():
 		_stone_color = STONE_COLORS[campaign.floor_number - 1]
 	_moving = false
+	_clash_turn = -1
 	_player_cell = floor_state.player
 	_enemy_cells.clear()
 	_visible_cells.clear()
@@ -68,6 +71,9 @@ func load_floor(floor_state: DungeonFloor, party: Array[BattleRules.Fighter], ca
 
 
 func refresh(animate: bool = false) -> bool:
+	if not _floor.skirmish.is_empty() and _clash_turn != _floor.turn:
+		_clash_turn = _floor.turn
+		_clash_started = _ambient_time
 	_player_from = _player_cell
 	_player_cell = _floor.player
 	if _player_from != _player_cell:
@@ -201,6 +207,23 @@ func _draw() -> void:
 		var enemy: DungeonFloor.Enemy = enemy_depths.get(cell)
 		if enemy != null:
 			_draw_enemy(enemy)
+	_draw_skirmish()
+
+
+func _draw_skirmish() -> void:
+	if _floor.skirmish.is_empty() or _clash_turn != _floor.turn:
+		return
+	var progress: float = (_ambient_time - _clash_started) / 0.35
+	if progress >= 1.0:
+		return
+	var first: Vector2 = _tiles.map_to_local(_floor.skirmish[0].cell)
+	var second: Vector2 = _tiles.map_to_local(_floor.skirmish[1].cell)
+	var center: Vector2 = first.lerp(second, 0.5) - Vector2(0, 14)
+	var spark := Color(1.0, 0.70, 0.39, 1.0 - progress)
+	for ray: int in range(5):
+		var direction: Vector2 = Vector2.from_angle(ray * TAU / 5.0 + 0.3)
+		var tip: Vector2 = center + direction * lerpf(3.0, 13.0, progress)
+		draw_line(tip - direction * 4.0, tip, spark, 1.4, true)
 
 
 func _draw_cell(cell: Vector2i) -> void:
@@ -336,6 +359,11 @@ func _draw_landmark(cell: Vector2i, center: Vector2, terrain: String) -> void:
 			_draw_outline(center, Vector2(10, 5), Color("#b39df4"))
 			draw_rect(Rect2(center + Vector2(-5, -12), Vector2(10, 9)), Color("#514071"))
 			draw_rect(Rect2(center + Vector2(-3, -10), Vector2(6, 4)), Color("#b39df4"))
+		elif terrain == "T":
+			var pennant := Color("#b6a3f7")
+			draw_line(center + Vector2(0, 3), center + Vector2(0, -18), Color("#b39163"), 1.8, true)
+			draw_colored_polygon(PackedVector2Array([center + Vector2(1, -18),
+				center + Vector2(13, -15), center + Vector2(1, -9)]), pennant)
 
 
 func _draw_refuge_door(center: Vector2) -> void:

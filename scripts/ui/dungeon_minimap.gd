@@ -29,6 +29,8 @@ func _draw() -> void:
 				color = Color("#448078")
 			elif _floor.terrain_at(cell) == ">":
 				color = Color("#e8c07b")
+			elif _floor.terrain_at(cell) == "T":
+				color = Color("#b6a3f7")
 		draw_rect(Rect2(origin + Vector2(cell) * tile, Vector2.ONE * tile), color)
 
 	for enemy: DungeonFloor.Enemy in _floor.enemies:

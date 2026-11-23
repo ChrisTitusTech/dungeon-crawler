@@ -169,6 +169,8 @@ func _place_encounters() -> void:
 			_put(center + Vector2i(2, -1), "r")
 			_put(center + Vector2i(2, 1), "k")
 			_put(center + Vector2i(-2, 1), "!")
+			_put(center + Vector2i(3, -1), "g")
+			_put(center + Vector2i(0, -2), "T")
 			continue
 		var count: int = _random.randi_range(0, 2)
 		for enemy: int in count:

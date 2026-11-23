@@ -205,7 +205,12 @@ func _take_turn(direction: Vector2i) -> void:
 	if _floor.player != previous:
 		_audio.play_cue(DungeonAudio.Cue.STEP)
 	var moving: bool = _dungeon.refresh(true)
-	_refresh_exploration(MOVE_HINT)
+	var notice: String = MOVE_HINT
+	if not _floor.skirmish.is_empty():
+		var first: String = CampaignRun.CONTENT.factions[_floor.skirmish[0].faction].name
+		var second: String = CampaignRun.CONTENT.factions[_floor.skirmish[1].faction].name
+		notice = "%s and %s clash nearby." % [first, second]
+	_refresh_exploration(notice)
 	if _floor.encounter != null and not moving:
 		_open_battle(_floor.encounter.kind)
 
@@ -237,6 +242,10 @@ func _begin_battle(enemy_kind: DungeonFloor.EnemyKind) -> void:
 	var opponent: BattleRules.Fighter
 	if _run != null:
 		opponent = CampaignRun.CONTENT.make_fighter(_run.enemy_id(enemy_kind))
+		var encounter: DungeonFloor.Enemy = _floor.encounter
+		if encounter != null and encounter.skirmish_wounds > 0:
+			opponent.hp = maxi(1, opponent.max_hp - encounter.skirmish_wounds * 4)
+			opponent.entrance = "%s is already wounded from a faction skirmish." % opponent.name
 	else:
 		var enemy_name: String = CampaignRun.CONTENT.foes[CampaignRun.ENEMY_IDS[enemy_kind]].name
 		match enemy_kind:
@@ -427,7 +436,7 @@ func _interaction_cell() -> Vector2i:
 			if terrain == "d" or terrain in DungeonFloor.FIXTURES:
 				return cell
 			continue
-		if terrain in [">", "D"] or _run.fallen_gear.has(cell):
+		if terrain in [">", "D", "T"] or _run.fallen_gear.has(cell):
 			return cell
 		if terrain in ["c", "R", "P", "!"] and not _run.used_sites.has(cell):
 			return cell
@@ -470,6 +479,9 @@ func _interact() -> void:
 			"!":
 				_show_broadcast(cell)
 				return
+			"T":
+				_show_outpost(cell)
+				return
 			"m":
 				var mimic: DungeonFloor.Enemy = _floor.enemy_at(cell)
 				if mimic != null:
@@ -498,6 +510,20 @@ func _show_broadcast(cell: Vector2i) -> void:
 		CampaignMenu.choice(cost, _accept_broadcast.bind(cell), _run.seconds_left <= offer.seconds),
 		CampaignMenu.choice("Leave the terminal", _hide_menu),
 	])
+
+
+func _show_outpost(cell: Vector2i) -> void:
+	var factions: PackedStringArray = _floor.outpost_factions(cell)
+	for index: int in factions.size():
+		factions[index] = CampaignRun.CONTENT.factions[factions[index]].name
+	var detail: String = "No patrol holds this post."
+	if factions.size() == 1:
+		detail = "Held by the %s." % factions[0]
+	elif factions.size() > 1:
+		detail = "Contested by %s." % " and ".join(factions)
+	if _run.survey_outpost(cell):
+		detail += "\n\nReport ready. Return to the Watch envoy."
+	_present(CampaignRun.OUTPOSTS[_run.floor_number - 1], detail, [CampaignMenu.choice("Continue", _hide_menu)])
 
 
 func _accept_broadcast(cell: Vector2i) -> void:
@@ -569,6 +595,7 @@ func _exploration_hint() -> String:
 			if _floor.enemy_at(site) != null:
 				return "Use to take supplies"
 		"!": return "Use to hear the sponsor's offer"
+		"T": return "Use to inspect the faction banner"
 		"R": return "Use to talk to Sable"
 		"P": return "Use a bandage to rescue Cinder"
 		">": return "Use to descend" if _run.boss_defeated else "%s holds the stairs" % _run.boss_name()
@@ -684,11 +711,23 @@ func _show_envoy(message: String = "") -> void:
 		detail += "The Watch respects those who hunt Ashfang beasts. A gift of bandages can earn a truce."
 	if not message.is_empty():
 		detail += "\n\n" + message
-	_present("Watch envoy", detail, [
+	var choices: Array[Dictionary] = [
 		CampaignMenu.choice("Offer %d bandages · +%d standing" % [faction.gift_cost, faction.gift_standing],
 			_offer_watch_gift, truce or _run.count(faction.gift) < faction.gift_cost),
-		CampaignMenu.choice("Back", _hide_menu),
-	])
+	]
+	match _run.watch_job:
+		CampaignRun.WatchJob.AVAILABLE:
+			if _run.floor_number == 1:
+				detail += "\n\nScout the Latchknife banner near the first chamber. Bring back a report for a bronze box and +8 Watch standing."
+				choices.append(CampaignMenu.choice("Accept scouting job", _accept_watch_job))
+		CampaignRun.WatchJob.SCOUTING:
+			detail += "\n\nScouting job · Inspect the Latchknife banner in the first chamber."
+		CampaignRun.WatchJob.REPORT_READY:
+			choices.append(CampaignMenu.choice("Turn in scouting report", _report_watch_job))
+		CampaignRun.WatchJob.PAID:
+			detail += "\n\nScouting report turned in."
+	choices.append(CampaignMenu.choice("Back", _hide_menu))
+	_present("Watch envoy", detail, choices)
 
 
 func _offer_watch_gift() -> void:
@@ -696,6 +735,16 @@ func _offer_watch_gift() -> void:
 		var message: String = _save_refuge_action("The Watch accepts the gift.")
 		_refresh_exploration(message)
 		_show_envoy(message)
+
+
+func _accept_watch_job() -> void:
+	if _run.accept_watch_job():
+		_show_envoy(_save_refuge_action("Scouting job accepted."))
+
+
+func _report_watch_job() -> void:
+	if _run.report_watch_job():
+		_show_envoy(_save_refuge_action("Earned a bronze box and +8 Watch standing."))
 
 
 func _show_sponsors(message: String = "") -> void:
