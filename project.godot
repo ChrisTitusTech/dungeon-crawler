@@ -68,6 +68,10 @@ open_inventory={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"physical_keycode":73), Object(InputEventJoypadButton,"button_index":2)]
 }
+open_equipment={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":71)]
+}
 toggle_minimap={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"physical_keycode":77), Object(InputEventJoypadButton,"button_index":4)]

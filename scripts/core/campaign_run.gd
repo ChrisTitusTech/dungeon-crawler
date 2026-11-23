@@ -228,19 +228,33 @@ func eat() -> void:
 
 func equip(member: BattleRules.Fighter, item: String) -> bool:
 	var definition: Dictionary = CONTENT.items.get(item, {})
-	if member.hp == 0 or member.is_pet or count(item) == 0 or not definition.has("slot"):
+	var slot: String = definition.get("slot", "")
+	if member.hp == 0 or member.is_pet or count(item) == 0 or slot not in ["weapon", "armor"]:
 		return false
 	spend_item(item)
-	if definition.slot == "weapon":
-		if not member.weapon.is_empty():
-			add_item(member.weapon)
+	unequip(member, slot)
+	if slot == "weapon":
 		member.weapon = item
 		member.weapon_bonus = definition.bonus
 	else:
-		if not member.armor.is_empty():
-			add_item(member.armor)
 		member.armor = item
 		member.armor_bonus = definition.bonus
+	return true
+
+
+func unequip(member: BattleRules.Fighter, slot: String) -> bool:
+	if member.hp == 0 or member.is_pet:
+		return false
+	if slot == "weapon" and not member.weapon.is_empty():
+		add_item(member.weapon)
+		member.weapon = ""
+		member.weapon_bonus = 0
+	elif slot == "armor" and not member.armor.is_empty():
+		add_item(member.armor)
+		member.armor = ""
+		member.armor_bonus = 0
+	else:
+		return false
 	return true
 
 

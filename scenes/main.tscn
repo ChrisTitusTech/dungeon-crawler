@@ -167,6 +167,13 @@ layout_mode = 2
 focus_mode = 0
 text = "Pack [I]"
 
+[node name="Equipment" type="Button" parent="Interface/HUD/Footer/FooterContent/Actions"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+focus_mode = 0
+text = "Equipment [G]"
+
 [node name="Wait" type="Button" parent="Interface/HUD/Footer/FooterContent/Actions"]
 unique_name_in_owner = true
 layout_mode = 2

@@ -83,6 +83,64 @@ func _tap_pad(button: JoyButton) -> void:
 		get_viewport().push_input(event)
 
 
+func test_equipment_menu_filters_gear_and_saves_slot_changes() -> void:
+	var game: DungeonGame = GAME.instantiate() as DungeonGame
+	game.save_directory = _directory
+	add_child_autofree(game)
+	game._new_slot(1)
+	game._interact()
+	assert_true(game._run.at_camp())
+	game._run.add_item("iron_blade")
+	game._run.add_item("hide_coat")
+	game._run.add_item("marshal_mail")
+	var rook: BattleRules.Fighter = game._run.party[0]
+	var heading: Label = game._menu.get_node("%Heading")
+	var detail: Label = game._menu.get_node("%Detail")
+	var choices: VBoxContainer = game._menu.get_node("%Choices")
+
+	var shortcut := InputEventKey.new()
+	shortcut.physical_keycode = KEY_G
+	shortcut.pressed = true
+	get_viewport().push_input(shortcut)
+	assert_eq(heading.text, "Equipment")
+	_tap_pad(JOY_BUTTON_A)
+	assert_eq(heading.text, "Equipment · Rook")
+	_tap_pad(JOY_BUTTON_A)
+	assert_eq(heading.text, "Rook · Weapon")
+	assert_eq(choices.get_child_count(), 2, "Only the blade and Back belong in the weapon menu.")
+	_tap_pad(JOY_BUTTON_A)
+	assert_eq(rook.weapon, "iron_blade")
+	assert_eq(rook.weapon_bonus, 3)
+	assert_eq(game._run.count("iron_blade"), 0)
+
+	_tap_pad(JOY_BUTTON_B)
+	_tap_pad(JOY_BUTTON_DPAD_DOWN)
+	_tap_pad(JOY_BUTTON_A)
+	assert_eq(heading.text, "Rook · Chest armor")
+	assert_eq(choices.get_child_count(), 3, "Only the two chest pieces and Back belong in this menu.")
+	_tap_pad(JOY_BUTTON_A)
+	assert_eq(rook.armor, "hide_coat")
+	assert_string_contains(detail.text, "Hide coat")
+	_tap_pad(JOY_BUTTON_A)
+	assert_eq(rook.armor, "marshal_mail")
+	assert_eq(rook.armor_bonus, CampaignRun.CONTENT.items["marshal_mail"].bonus)
+	assert_eq(game._run.count("hide_coat"), 1, "Swapping chest pieces returns the old one to the pack.")
+	assert_eq(CampaignSave.read(_directory, 1).party[0].armor, "marshal_mail")
+
+	_tap_pad(JOY_BUTTON_DPAD_DOWN)
+	_tap_pad(JOY_BUTTON_A)
+	assert_eq(rook.armor, "")
+	assert_eq(rook.armor_bonus, 0)
+	assert_eq(game._run.count("marshal_mail"), 1)
+	assert_eq(rook.weapon, "iron_blade")
+	assert_eq(CampaignSave.read(_directory, 1).party[0].armor, "")
+	assert_string_contains(detail.text, "Empty slot")
+	_tap_pad(JOY_BUTTON_B)
+	_tap_pad(JOY_BUTTON_B)
+	_tap_pad(JOY_BUTTON_B)
+	assert_false(game._menu.visible)
+
+
 func test_seed_repeats_and_rooms_stay_connected() -> void:
 	var generator := FloorOneGenerator.new()
 	var layout: DungeonLayout = generator.generate(73)

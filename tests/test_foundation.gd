@@ -16,7 +16,7 @@ func test_exploration_inputs_are_bound() -> void:
 	var exploration_actions: Array[StringName] = [
 		&"move_up", &"move_down", &"move_left", &"move_right",
 		&"interact", &"select_tile", &"wait_turn", &"open_party",
-		&"open_inventory", &"toggle_minimap", &"pause",
+		&"open_inventory", &"open_equipment", &"toggle_minimap", &"pause",
 	]
 	for action: StringName in exploration_actions:
 		assert_true(InputMap.has_action(action), "Missing input action: %s" % action)
