@@ -4,6 +4,7 @@ extends Control
 const LAYOUT: DungeonLayout = preload("res://data/prototype_floor.tres")
 const BATTLE_SCREEN := preload("res://scenes/battle.tscn")
 const RUN_MENU := preload("res://scenes/campaign_menu.tscn")
+const EQUIPMENT_SCREEN := preload("res://scenes/equipment.tscn")
 const MOVEMENT: Dictionary[StringName, Vector2i] = {
 	&"move_up": Vector2i.UP,
 	&"move_down": Vector2i.DOWN,
@@ -12,7 +13,6 @@ const MOVEMENT: Dictionary[StringName, Vector2i] = {
 }
 const MOVE_HINT := "WASD, arrows, or click adjacent"
 const NO_SITE := Vector2i(-1, -1)
-const EQUIPMENT_SLOTS: Dictionary[String, String] = {"weapon": "Weapon", "armor": "Chest armor"}
 
 @export var prototype_mode: bool = false
 @export var save_directory: String = "user://"
@@ -46,6 +46,7 @@ var _tonics: int
 var _battle: BattleView
 var _run: CampaignRun
 var _menu: CampaignMenu
+var _equipment: EquipmentView
 var _slot: int
 var _checkpoint: Dictionary
 var _menu_back: Callable
@@ -82,6 +83,11 @@ func _ready() -> void:
 	_menu = RUN_MENU.instantiate() as CampaignMenu
 	_interface.add_child(_menu)
 	_menu.option_chosen.connect(_audio.play_cue.bind(DungeonAudio.Cue.CONFIRM))
+	_equipment = EQUIPMENT_SCREEN.instantiate() as EquipmentView
+	_interface.add_child(_equipment)
+	_equipment.option_chosen.connect(_audio.play_cue.bind(DungeonAudio.Cue.CONFIRM))
+	_equipment.gear_changed.connect(_equipment_changed)
+	_equipment.back_requested.connect(func() -> void: _menu_back.call())
 	_show_slots()
 
 
@@ -135,7 +141,7 @@ func _process(delta: float) -> void:
 
 
 func _update_floor_clock(elapsed: float) -> void:
-	if _run == null or _run.at_camp() or _run.completed or _menu.visible or _fade.busy:
+	if _run == null or _run.at_camp() or _run.completed or _menu_visible() or _fade.busy:
 		return
 	var previous_announcement: String = _run.announcement
 	_run.elapse_floor_time(elapsed)
@@ -175,7 +181,7 @@ func _input(event: InputEvent) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if _fade.busy:
 		return
-	if _menu != null and _menu.visible:
+	if _menu_visible():
 		if _menu_back.is_valid() and event.is_action_pressed(&"ui_cancel"):
 			get_viewport().set_input_as_handled()
 			_menu_back.call()
@@ -217,7 +223,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _can_explore() -> bool:
-	return _floor != null and _floor.encounter == null and _battle == null and not _fade.busy and (_menu == null or not _menu.visible)
+	return _floor != null and _floor.encounter == null and _battle == null and not _fade.busy and not _menu_visible()
+
+
+func _menu_visible() -> bool:
+	return _menu != null and (_menu.visible or _equipment.visible)
 
 
 func _start_floor() -> void:
@@ -721,57 +731,13 @@ func _show_inventory() -> void:
 
 
 func _show_equipment(back: Callable = Callable()) -> void:
-	if not back.is_valid():
-		back = _hide_menu
-	var choices: Array[Dictionary] = []
-	for member: BattleRules.Fighter in _party:
-		var weapon: String = CampaignRun.CONTENT.items.get(member.weapon, {}).get("name", "Bare hands")
-		var armor: String = CampaignRun.CONTENT.items.get(member.armor, {}).get("name", "No chest armor")
-		var gear: String = "Pet" if member.is_pet else "%s · %s" % [weapon, armor]
-		if member.hp == 0:
-			gear += " · Fallen"
-		choices.append(CampaignMenu.choice("%s · %s" % [member.name, gear],
-			_show_member_equipment.bind(member, _show_equipment.bind(back)), member.is_pet or member.hp == 0))
-	choices.append(CampaignMenu.choice("Back", back))
-	_present("Equipment", "", choices, true, back)
+	_menu_back = back if back.is_valid() else _hide_menu
+	_menu.hide()
+	_equipment.present(_run, _reduced_motion)
 
 
-func _show_member_equipment(member: BattleRules.Fighter, back: Callable) -> void:
-	var choices: Array[Dictionary] = []
-	for slot: String in EQUIPMENT_SLOTS:
-		var equipped: String = member.weapon if slot == "weapon" else member.armor
-		var item_name: String = CampaignRun.CONTENT.items.get(equipped, {}).get("name", "Empty")
-		choices.append(CampaignMenu.choice("%s · %s" % [EQUIPMENT_SLOTS[slot], item_name],
-			_show_equipment_slot.bind(member, slot, _show_member_equipment.bind(member, back))))
-	choices.append(CampaignMenu.choice("Back to equipment", back))
-	_present("Equipment · %s" % member.name, "", choices, true, back)
-
-
-func _show_equipment_slot(member: BattleRules.Fighter, slot: String, back: Callable) -> void:
-	var equipped: String = member.weapon if slot == "weapon" else member.armor
-	var current: Dictionary = CampaignRun.CONTENT.items.get(equipped, {})
-	var detail: String = "Empty slot" if current.is_empty() else "Equipped · %s · %s" % [current.name, current.description]
-	var choices: Array[Dictionary] = []
-	var items: Array = _run.inventory.keys()
-	items.sort()
-	for item: String in items:
-		var definition: Dictionary = CampaignRun.CONTENT.items.get(item, {})
-		if definition.get("slot") == slot and item != equipped:
-			var label: String = "Equip %s ×%d · %s" % [definition.name, _run.count(item), definition.description]
-			choices.append(CampaignMenu.choice(label, _change_equipment.bind(member, slot, item, back)))
-	if choices.is_empty():
-		detail += "\nNo other gear for this slot in the pack." if not equipped.is_empty() else "\nNo gear for this slot in the pack."
-	if not equipped.is_empty():
-		choices.append(CampaignMenu.choice("Unequip to pack", _change_equipment.bind(member, slot, "", back)))
-	choices.append(CampaignMenu.choice("Back to %s" % member.name, back))
-	_present("%s · %s" % [member.name, EQUIPMENT_SLOTS[slot]], detail, choices, true, back)
-
-
-func _change_equipment(member: BattleRules.Fighter, slot: String, item: String, back: Callable) -> void:
-	var applied: bool = _run.unequip(member, slot) if item.is_empty() else _run.equip(member, item)
-	if applied:
-		_refresh_exploration(_save() if _run.at_camp() else "Updated %s's equipment." % member.name)
-		_show_equipment_slot(member, slot, back)
+func _equipment_changed(member: BattleRules.Fighter) -> void:
+	_refresh_exploration(_save() if _run.at_camp() else "Updated %s's equipment." % member.name)
 
 
 func _show_crafting(message: String = "") -> void:
@@ -1027,8 +993,10 @@ func _rook_identity() -> String:
 func _present(title: String, detail: String, choices: Array[Dictionary], dismissible: bool = true,
 	back: Callable = Callable()) -> void:
 	_menu_back = back if back.is_valid() or not dismissible else _hide_menu
+	_equipment.hide()
 	_menu.present(title, detail, choices)
 
 
 func _hide_menu() -> void:
 	_menu.hide()
+	_equipment.hide()

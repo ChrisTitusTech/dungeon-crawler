@@ -1,0 +1,194 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/equipment_view.gd" id="1_view"]
+[ext_resource type="Theme" path="res://data/prototype_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" path="res://assets/battle_vault.png" id="3_vault"]
+
+[sub_resource type="StyleBoxFlat" id="PaperDoll"]
+content_margin_left = 8.0
+content_margin_top = 7.0
+content_margin_right = 8.0
+content_margin_bottom = 7.0
+bg_color = Color(0.075, 0.105, 0.135, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.43, 0.34, 0.23, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_left = 4
+corner_radius_bottom_right = 4
+
+[sub_resource type="StyleBoxFlat" id="Detail"]
+content_margin_left = 8.0
+content_margin_top = 5.0
+content_margin_right = 8.0
+content_margin_bottom = 5.0
+bg_color = Color(0.048, 0.075, 0.095, 1)
+border_width_top = 1
+border_color = Color(0.23, 0.31, 0.36, 1)
+
+[node name="EquipmentView" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_view")
+
+[node name="Shade" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.025, 0.04, 0.055, 0.93)
+
+[node name="Frame" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="Frame"]
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="Header" type="HBoxContainer" parent="Frame/Layout"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Frame/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "Equipment"
+
+[node name="Back" type="Button" parent="Frame/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Back"
+
+[node name="Panels" type="HBoxContainer" parent="Frame/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 9
+
+[node name="Character" type="PanelContainer" parent="Frame/Layout/Panels"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("PaperDoll")
+
+[node name="Layout" type="VBoxContainer" parent="Frame/Layout/Panels/Character"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Members" type="HBoxContainer" parent="Frame/Layout/Panels/Character/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Stage" type="Control" parent="Frame/Layout/Panels/Character/Layout"]
+unique_name_in_owner = true
+clip_contents = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Backdrop" type="TextureRect" parent="Frame/Layout/Panels/Character/Layout/Stage"]
+modulate = Color(0.61, 0.62, 0.66, 1)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("3_vault")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Armor" type="Button" parent="Frame/Layout/Panels/Character/Layout/Stage"]
+unique_name_in_owner = true
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -84.0
+offset_top = 14.0
+offset_right = -6.0
+offset_bottom = 73.0
+toggle_mode = true
+
+[node name="Weapon" type="Button" parent="Frame/Layout/Panels/Character/Layout/Stage"]
+unique_name_in_owner = true
+layout_mode = 1
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = -73.0
+offset_right = 84.0
+offset_bottom = -14.0
+toggle_mode = true
+
+[node name="Stats" type="Label" parent="Frame/Layout/Panels/Character/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="Pack" type="PanelContainer" parent="Frame/Layout/Panels"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.86
+
+[node name="Layout" type="VBoxContainer" parent="Frame/Layout/Panels/Pack"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="PackTitle" type="Label" parent="Frame/Layout/Panels/Pack/Layout"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Party pack"
+
+[node name="Scroll" type="ScrollContainer" parent="Frame/Layout/Panels/Pack/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="Grid" type="GridContainer" parent="Frame/Layout/Panels/Pack/Layout/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 5
+theme_override_constants/v_separation = 5
+columns = 4
+
+[node name="DetailPanel" type="PanelContainer" parent="Frame/Layout/Panels/Pack/Layout"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Detail")
+
+[node name="Layout" type="VBoxContainer" parent="Frame/Layout/Panels/Pack/Layout/DetailPanel"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="ItemName" type="Label" parent="Frame/Layout/Panels/Pack/Layout/DetailPanel/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.79, 0.57, 1)
+theme_override_font_sizes/font_size = 13
+text_overrun_behavior = 3
+
+[node name="Detail" type="Label" parent="Frame/Layout/Panels/Pack/Layout/DetailPanel/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 33)
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="Apply" type="Button" parent="Frame/Layout/Panels/Pack/Layout/DetailPanel/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 25)
+layout_mode = 2
