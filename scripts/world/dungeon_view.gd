@@ -8,6 +8,7 @@ const ENEMY_MARK := Color(0.98, 0.55, 0.43, 0.7)
 const STEP_TIME := 0.13
 const STONE_COLORS := [Color("#5e6069"), Color("#665776"), Color("#46616a")]
 const PARTY_OFFSETS := [Vector2(7, 8), Vector2(-12, 2), Vector2(22, -4), Vector2(-25, -6)]
+const FOOTPRINT_POINTS := [Vector2.ZERO, Vector2(-4, 0), Vector2(4, 0), Vector2(0, -2), Vector2(0, 2)]
 const TILE_TOP := Vector2(0, -8)
 const TILE_LEFT := Vector2(-16, 0)
 const TILE_RIGHT := Vector2(16, 0)
@@ -172,8 +173,10 @@ func _draw() -> void:
 	if _floor == null:
 		return
 
-	# Actors use the near or far tile for occlusion as they cross the midpoint.
+	# The leader's marker follows the step. Each companion is sorted at their own feet.
 	var party_depth: Vector2i = _draw_depth(_player_from, _player_cell)
+	var party_center: Vector2 = _project_step(_player_from, _player_cell)
+	var party_depths: Dictionary[Vector2i, Array] = _party_placements(party_center)
 	var enemy_depths: Dictionary[Vector2i, DungeonFloor.Enemy] = {}
 	for enemy: DungeonFloor.Enemy in _floor.enemies:
 		var origin: Vector2i = _enemy_from.get(enemy, enemy.cell)
@@ -191,7 +194,10 @@ func _draw() -> void:
 			continue
 		_draw_cell(cell)
 		if cell == party_depth:
-			_draw_party()
+			_draw_outline(party_center, Vector2(14, 7), PARTY_MARK)
+		for actor: Dictionary in party_depths.get(cell, []):
+			_draw_actor(actor.feet, actor.model, actor.height, _party_facing,
+				_pose(_player_from != _player_cell, actor.slot))
 		var enemy: DungeonFloor.Enemy = enemy_depths.get(cell)
 		if enemy != null:
 			_draw_enemy(enemy)
@@ -218,22 +224,46 @@ func _draw_cell(cell: Vector2i) -> void:
 		_draw_landmark(cell, center, terrain)
 
 
-func _draw_party() -> void:
-	var center: Vector2 = _project_step(_player_from, _player_cell)
-	_draw_outline(center, Vector2(14, 7), PARTY_MARK)
-	var standing: Array[int] = []
+func _party_placements(center: Vector2) -> Dictionary[Vector2i, Array]:
+	var tiles: Dictionary[Vector2i, Array] = {}
+	var slot: int = 0
 	for index: int in _party.size():
-		if _party[index].hp > 0:
-			standing.append(index)
-	for slot: int in range(standing.size() - 1, -1, -1):
-		var index: int = standing[slot]
 		var member: BattleRules.Fighter = _party[index]
+		if member.hp == 0:
+			continue
 		var model: String = ActorArt.model(member, "rook" if index == 0 else "mira")
 		var height: float = 36.0 if slot == 0 else 32.0
 		if member.is_pet:
 			height = 27.0
-		_draw_actor(center + PARTY_OFFSETS[slot], model, height, _party_facing,
-			_pose(_player_from != _player_cell, slot))
+		var feet: Vector2 = _party_feet(center, PARTY_OFFSETS[slot])
+		var tile: Vector2i = _tiles.local_to_map(feet)
+		if not tiles.has(tile):
+			tiles[tile] = []
+		tiles[tile].append({"feet": feet, "model": model, "height": height, "slot": slot})
+		slot += 1
+	for actors: Array in tiles.values():
+		actors.sort_custom(func(left: Dictionary, right: Dictionary) -> bool: return left.feet.y < right.feet.y)
+	return tiles
+
+
+func _party_feet(center: Vector2, offset: Vector2) -> Vector2:
+	# Walk the offset out from the leader so a companion cannot skip over a wall.
+	var samples: int = maxi(1, ceili(offset.length() / 2.0))
+	var feet: Vector2 = center
+	for step: int in range(1, samples + 1):
+		var candidate: Vector2 = center + offset * (float(step) / samples)
+		if not _has_party_footing(candidate):
+			break
+		feet = candidate
+	return feet
+
+
+func _has_party_footing(feet: Vector2) -> bool:
+	for point: Vector2 in FOOTPRINT_POINTS:
+		var tile: Vector2i = _tiles.local_to_map(feet + point)
+		if not _floor.is_walkable(tile) or not _floor.explored.has(tile):
+			return false
+	return true
 
 
 func _draw_enemy(enemy: DungeonFloor.Enemy) -> void:

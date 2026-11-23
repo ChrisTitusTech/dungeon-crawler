@@ -18,6 +18,42 @@ func test_projected_tile_centers_resolve_to_the_original_grid() -> void:
 		assert_eq(view.cell_at_screen_position(projected), cell)
 
 
+func test_companions_keep_their_footing_in_a_one_tile_turn() -> void:
+	var game: DungeonGame = GAME.instantiate() as DungeonGame
+	game.prototype_mode = true
+	add_child_autofree(game)
+	var view: DungeonView = game.get_node("Dungeon")
+	var tiles: TileMapLayer = view.get_node("Tiles")
+	var floor_state := DungeonFloor.new(PackedStringArray([
+		"#######", "#S..###", "###.###", "###...#", "#######",
+	]))
+	var party: Array[BattleRules.Fighter] = [
+		CampaignRun.CONTENT.make_fighter("rook"),
+		CampaignRun.CONTENT.make_fighter("mira"),
+		CampaignRun.CONTENT.make_fighter("sable"),
+	]
+	view.load_floor(floor_state, party)
+	var start: Vector2i = floor_state.player
+	var corner := Vector2i(3, 1)
+	assert_true(floor_state.is_wall(tiles.local_to_map(tiles.map_to_local(corner) + Vector2(22, -4))),
+		"The former third-member offset reaches into the wall.")
+	for direction: Vector2i in [Vector2i.RIGHT, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.DOWN, Vector2i.RIGHT]:
+		assert_true(floor_state.take_turn(direction))
+		view.refresh()
+		for frame: int in range(9):
+			var center: Vector2 = tiles.map_to_local(start).lerp(tiles.map_to_local(floor_state.player), frame / 8.0)
+			var count: int = 0
+			var placements: Dictionary[Vector2i, Array] = view._party_placements(center)
+			for cell: Vector2i in placements:
+				assert_true(floor_state.is_walkable(cell))
+				for actor: Dictionary in placements[cell]:
+					assert_true(floor_state.is_walkable(tiles.local_to_map(actor.feet + Vector2(4, 0))))
+					assert_true(floor_state.is_walkable(tiles.local_to_map(actor.feet - Vector2(4, 0))))
+					count += 1
+			assert_eq(count, 3)
+		start = floor_state.player
+
+
 func test_battle_buttons_take_the_party_back_to_a_changed_dungeon() -> void:
 	var game: DungeonGame = GAME.instantiate() as DungeonGame
 	game.prototype_mode = true
