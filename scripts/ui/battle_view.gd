@@ -26,6 +26,7 @@ const ACTION_CUES := [DungeonAudio.Cue.HIT, DungeonAudio.Cue.GUARD, DungeonAudio
 @onready var _continue: Button = %Continue
 @onready var _enemy_delay: Timer = $EnemyDelay
 @onready var _backdrop: TextureRect = $Backdrop
+@onready var _arena_material: Material = _backdrop.material
 
 var rules: BattleRules
 var _party_cards: Array[BattleFighterView] = []
@@ -73,13 +74,23 @@ func start(battle: BattleRules, enemy_kind: DungeonFloor.EnemyKind, uses_checkpo
 func release_controls() -> void:
 	if _controls_held:
 		_controls_held = false
-		_render()
+		if not _animating:
+			_render()
 
 
 func hold_controls() -> void:
 	_controls_held = true
+	_enemy_delay.stop()
 	_lock_commands()
 	_continue.disabled = true
+
+
+func update_motion_setting(enabled: bool) -> void:
+	reduced_motion = enabled
+	_backdrop.material = null if enabled else _arena_material
+	for card: BattleFighterView in _party_cards:
+		card.reduced_motion = enabled
+	_enemy_card.reduced_motion = enabled
 
 
 func show_floor_clock(remaining: String) -> void:

@@ -78,7 +78,7 @@ toggle_minimap={
 }
 pause={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"physical_keycode":80), Object(InputEventJoypadButton,"button_index":6)]
+"events": [Object(InputEventKey,"keycode":4194305), Object(InputEventKey,"physical_keycode":80), Object(InputEventJoypadButton,"button_index":6)]
 }
 
 [rendering]

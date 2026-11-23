@@ -37,6 +37,8 @@ func test_controller_confirms_menus_without_reusing_a_as_interact() -> void:
 	var heading: Label = game._menu.get_node("%Heading")
 	assert_eq(heading.text, "Paused")
 	_tap_pad(JOY_BUTTON_DPAD_DOWN)
+	_tap_pad(JOY_BUTTON_A)
+	assert_eq(heading.text, "Settings")
 	_tap_pad(JOY_BUTTON_DPAD_DOWN)
 	_tap_pad(JOY_BUTTON_A)
 	assert_eq(heading.text, "Accessibility")
@@ -45,6 +47,8 @@ func test_controller_confirms_menus_without_reusing_a_as_interact() -> void:
 	_tap_pad(JOY_BUTTON_A)
 	assert_true(game._dungeon.reduced_motion)
 	assert_true(game._single_step)
+	_tap_pad(JOY_BUTTON_B)
+	assert_eq(heading.text, "Settings")
 	_tap_pad(JOY_BUTTON_B)
 	assert_eq(heading.text, "Paused")
 	_tap_pad(JOY_BUTTON_B)
@@ -81,6 +85,54 @@ func _tap_pad(button: JoyButton) -> void:
 		event.button_index = button
 		event.pressed = pressed
 		get_viewport().push_input(event)
+
+
+func _tap_escape() -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventKey.new()
+		event.keycode = KEY_ESCAPE
+		event.pressed = pressed
+		get_viewport().push_input(event)
+
+
+func test_escape_pauses_battle_and_can_return_to_save_slots() -> void:
+	var game: DungeonGame = GAME.instantiate() as DungeonGame
+	game.save_directory = _directory
+	add_child_autofree(game)
+	game._new_slot(1)
+	var checkpoint: Dictionary = CampaignSave.read(_directory, 1)
+	var floor_state: DungeonFloor = game._run.floor
+	floor_state.encounter = floor_state.enemy_at(_find(floor_state, "r"))
+	game._open_battle(DungeonFloor.EnemyKind.RAT)
+	var battle: BattleView = game._battle
+	battle._choose(BattleRules.Command.DEFEND)
+	battle._choose(BattleRules.Command.DEFEND)
+	assert_same(battle.rules.current_fighter(), battle.rules.enemy)
+	assert_false(battle._enemy_delay.is_stopped())
+
+	_tap_escape()
+	var heading: Label = game._menu.get_node("%Heading")
+	assert_eq(heading.text, "Paused")
+	assert_gt(game._menu.get_index(), battle.get_index(), "The pause menu draws above combat.")
+	assert_true(battle._enemy_delay.is_stopped())
+	battle._enemy_turn()
+	assert_same(battle.rules.current_fighter(), battle.rules.enemy)
+	var seconds_left: float = game._run.seconds_left
+	game._update_floor_clock(1.0)
+	assert_eq(game._run.seconds_left, seconds_left)
+
+	_tap_escape()
+	assert_false(game._menu.visible)
+	assert_false(battle._enemy_delay.is_stopped())
+	battle._enemy_turn()
+	assert_ne(battle.rules.current_fighter(), battle.rules.enemy)
+	_tap_escape()
+	var choices: VBoxContainer = game._menu.get_node("%Choices")
+	(choices.get_child(2) as Button).pressed.emit()
+	assert_eq(heading.text, "Dungeon Crawler")
+	assert_null(game._battle)
+	assert_eq(CampaignSave.read(_directory, 1), checkpoint)
+	await wait_process_frames(1)
 
 
 func test_equipment_screen_swaps_gear_and_saves_slot_changes() -> void:
@@ -297,10 +349,11 @@ func test_collapse_reloads_the_actual_camp_checkpoint() -> void:
 	game._update_floor_clock(1500.5)
 	assert_eq(game._turn.text, "Time left 05:00")
 	assert_string_contains(game._announcer.text, "Five minutes")
-	game._show_pause()
+	_tap_escape()
+	assert_eq(heading.text, "Paused")
 	game._update_floor_clock(100.0)
 	assert_eq(game._run.seconds_left, 299.5)
-	game._hide_menu()
+	_tap_escape()
 	game._update_floor_clock(299.5)
 	assert_eq(heading.text, "The floor collapsed")
 	var reload_button: Button = choices.get_child(0)

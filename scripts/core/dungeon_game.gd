@@ -186,6 +186,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			_menu_back.call()
 		return
+	if _run != null and event.is_action_pressed(&"pause"):
+		get_viewport().set_input_as_handled()
+		_show_pause()
+		return
 	if not _can_explore():
 		return
 	if _run != null and event.is_action_pressed(&"interact"):
@@ -196,8 +200,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		_show_inventory()
 	elif _run != null and event.is_action_pressed(&"open_equipment"):
 		_show_equipment()
-	elif _run != null and event.is_action_pressed(&"pause"):
-		_show_pause()
 	elif event.is_action_pressed(&"toggle_minimap"):
 		_toggle_minimap()
 	elif event.is_action_pressed(&"wait_turn"):
@@ -308,6 +310,8 @@ func _begin_battle(enemy_kind: DungeonFloor.EnemyKind) -> void:
 	_hud.hide()
 	_dungeon.hide()
 	_interface.add_child(_battle)
+	if _menu != null:
+		_interface.move_child(_battle, _menu.get_index())
 	_battle.finished.connect(_close_battle)
 	var supplies: int = _run.count("tonic") if _run != null else _tonics
 	_audio.play_track(DungeonAudio.Track.BATTLE)
@@ -379,6 +383,8 @@ func _toggle_minimap() -> void:
 
 
 func _show_slots(message: String = "Choose a save slot to enter Floor 1.") -> void:
+	if _battle != null:
+		_dismiss_battle()
 	_run = null
 	_floor = null
 	_dungeon.hide()
@@ -395,8 +401,7 @@ func _show_slots(message: String = "Choose a save slot to enter Floor 1.") -> vo
 			choices.append(CampaignMenu.choice("Replace slot %d" % slot, _confirm_replace.bind(slot)))
 		else:
 			choices.append(CampaignMenu.choice("Slot %d · New run" % slot, _new_slot.bind(slot)))
-	choices.append(CampaignMenu.choice("Audio settings", _show_audio_settings))
-	choices.append(CampaignMenu.choice("Accessibility", _show_accessibility))
+	choices.append(CampaignMenu.choice("Settings", _show_settings.bind(_show_slots)))
 	choices.append(CampaignMenu.choice("Quit game", _quit))
 	_present("Dungeon Crawler", message, choices, false)
 
@@ -909,26 +914,41 @@ func _train(member: BattleRules.Fighter, stat: String) -> void:
 
 
 func _show_pause() -> void:
-	_present("Paused", "Use the safe room to record progress. Returning to the slot menu ends this session.", [
-		CampaignMenu.choice("Resume", _hide_menu),
-		CampaignMenu.choice("Audio settings", _show_audio_settings.bind(true)),
-		CampaignMenu.choice("Accessibility", _show_accessibility.bind(true)),
+	if _battle != null:
+		_battle.hold_controls()
+	_present("Paused", "Leaving the run returns you to your last checkpoint the next time you play.", [
+		CampaignMenu.choice("Resume", _resume_run),
+		CampaignMenu.choice("Settings", _show_settings.bind(_show_pause)),
 		CampaignMenu.choice("Return to save slots", _show_slots),
-	])
+		CampaignMenu.choice("Quit game", _quit),
+	], true, _resume_run)
 
 
-func _show_audio_settings(from_pause: bool = false) -> void:
-	var back: Callable = _show_pause if from_pause else _show_slots
-	_present("Audio settings", "Select a volume to cycle the level. Changes apply immediately.", [
-		CampaignMenu.choice("Music volume · %d%%" % _audio.music_volume, _change_volume.bind(true, from_pause)),
-		CampaignMenu.choice("Effects volume · %d%%" % _audio.effects_volume, _change_volume.bind(false, from_pause)),
+func _resume_run() -> void:
+	_hide_menu()
+	_resume_scene_controls()
+
+
+func _show_settings(back: Callable) -> void:
+	var settings: Callable = _show_settings.bind(back)
+	_present("Settings", "", [
+		CampaignMenu.choice("Audio", _show_audio_settings.bind(settings)),
+		CampaignMenu.choice("Accessibility", _show_accessibility.bind(settings)),
 		CampaignMenu.choice("Back", back),
 	], true, back)
 
 
-func _change_volume(music: bool, from_pause: bool) -> void:
+func _show_audio_settings(back: Callable) -> void:
+	_present("Audio settings", "Select a volume to cycle the level. Changes apply immediately.", [
+		CampaignMenu.choice("Music volume · %d%%" % _audio.music_volume, _change_volume.bind(true, back)),
+		CampaignMenu.choice("Effects volume · %d%%" % _audio.effects_volume, _change_volume.bind(false, back)),
+		CampaignMenu.choice("Back", back),
+	], true, back)
+
+
+func _change_volume(music: bool, back: Callable) -> void:
 	_audio.cycle_volume(music)
-	_show_audio_settings(from_pause)
+	_show_audio_settings(back)
 
 
 func _load_accessibility() -> void:
@@ -942,24 +962,25 @@ func _load_accessibility() -> void:
 func _apply_accessibility() -> void:
 	_dungeon.reduced_motion = _reduced_motion
 	_fade.reduced_motion = _reduced_motion
+	if _battle != null:
+		_battle.update_motion_setting(_reduced_motion)
 	_held_action = &""
 
 
-func _show_accessibility(from_pause: bool = false, notice: String = "") -> void:
-	var back: Callable = _show_pause if from_pause else _show_slots
+func _show_accessibility(back: Callable, notice: String = "") -> void:
 	var detail := "Reduced motion skips scene fades, camera slides, and combat motion effects. One tile per press turns off held movement."
 	if not notice.is_empty():
 		detail += "\n\n" + notice
 	_present("Accessibility", detail, [
 		CampaignMenu.choice("Reduced motion · %s" % ("On" if _reduced_motion else "Off"),
-			_toggle_accessibility.bind(true, from_pause)),
+			_toggle_accessibility.bind(true, back)),
 		CampaignMenu.choice("One tile per press · %s" % ("On" if _single_step else "Off"),
-			_toggle_accessibility.bind(false, from_pause)),
+			_toggle_accessibility.bind(false, back)),
 		CampaignMenu.choice("Back", back),
 	], true, back)
 
 
-func _toggle_accessibility(motion: bool, from_pause: bool) -> void:
+func _toggle_accessibility(motion: bool, back: Callable) -> void:
 	if motion:
 		_reduced_motion = not _reduced_motion
 	else:
@@ -970,7 +991,7 @@ func _toggle_accessibility(motion: bool, from_pause: bool) -> void:
 	settings.set_value("accessibility", "single_step", _single_step)
 	var error: Error = settings.save(accessibility_path)
 	var notice: String = "" if error == OK else "Settings applied for this session. Could not save them."
-	_show_accessibility(from_pause, notice)
+	_show_accessibility(back, notice)
 
 
 func _show_summary(notice: String = "") -> void:
