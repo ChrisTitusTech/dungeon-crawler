@@ -1,9 +1,9 @@
 class_name FloorOneGenerator
 extends RefCounted
 
-const VERSION := 2
-const WIDTH := 118
-const HEIGHT := 84
+const VERSION := 3
+const WIDTH := 168
+const HEIGHT := 118
 const LEGACY_DOOR := Vector2i(13, 21)
 const ENTRY := [
 	"###########",
@@ -37,10 +37,10 @@ func generate(floor_seed: int) -> DungeonLayout:
 	_terrain.fill("#".unicode_at(0))
 	_rooms.clear()
 	var entry := Vector2i(3, _random.randi_range(14, HEIGHT - 21))
-	var arena := Vector2i(101, _random.randi_range(9, HEIGHT - 18))
+	var arena := Vector2i(WIDTH - 17, _random.randi_range(9, HEIGHT - 18))
 	_stamp(entry, ENTRY)
 	_rooms.append(Rect2i(entry, Vector2i(11, 7)))
-	_place_rooms(_random.randi_range(18, 24))
+	_place_rooms(_random.randi_range(36, 48))
 	_connect_rooms()
 	_stamp(arena, ARENA)
 	var arena_door: Vector2i = arena + Vector2i(0, 4)
@@ -70,11 +70,11 @@ static func legacy(floor_seed: int) -> DungeonLayout:
 
 
 func _place_rooms(target: int) -> void:
-	for attempt: int in 900:
+	for attempt: int in 1800:
 		if _rooms.size() >= target + 1:
 			break
 		var size := Vector2i(_random.randi_range(7, 15), _random.randi_range(6, 11))
-		var origin := Vector2i(_random.randi_range(18, 98 - size.x),
+		var origin := Vector2i(_random.randi_range(18, WIDTH - 20 - size.x),
 			_random.randi_range(3, HEIGHT - size.y - 3))
 		var candidate := Rect2i(origin, size)
 		if _rooms.any(func(room: Rect2i) -> bool: return candidate.grow(2).intersects(room)):
@@ -108,8 +108,8 @@ func _connect_rooms() -> void:
 		links[Vector2i(mini(best.x, best.y), maxi(best.x, best.y))] = true
 		joined.append(best.y)
 
-	var extra: int = _random.randi_range(4, 9)
-	for attempt: int in 90:
+	var extra: int = _random.randi_range(8, 18)
+	for attempt: int in 180:
 		if extra == 0:
 			break
 		var first: int = _random.randi_range(1, _rooms.size() - 2)

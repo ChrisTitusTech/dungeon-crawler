@@ -22,7 +22,7 @@ Install the tools, then open `project.godot` in the editor or run `godot --edito
 
 ### Play the campaign
 
-Choose one of three save slots. New runs generate a 118×84 dungeon with varied rooms, paths, and encounters. Use the marked dungeon door to enter the separate safe-room map. Walk to a bed to fully heal standing party members and treat wounds, or use the dining table to restore up to half their maximum HP.
+Choose one of three save slots. New runs generate a 168×118 opening vault with varied rooms, paths, and encounters. Use the marked dungeon door to enter the separate safe-room map. Walk to a bed to fully heal standing party members and treat wounds, or use the dining table to restore up to half their maximum HP.
 
 Entering the safe room saves a checkpoint. Use the chest to save again or open reward boxes. Use the interior door to return to the dungeon tile you left. Each floor starts with 30 minutes. The countdown runs during exploration and battle, even while you stand still, and pauses in the safe room and campaign menus. A wipe or collapse lets you reload your last safe-room checkpoint with its saved time remaining.
 
@@ -34,7 +34,7 @@ Party HP, injuries, and equipment carry between fights. The pack lets you use to
 
 After defeating each boss, use the stairs. Floors 2 and 3 start at a safe-room checkpoint with a fresh 30-minute countdown. Choose Rook's race at the Floor 2 stairs. A Watch truce unlocks an extra race. At the Floor 3 stairs, choose any of the twelve base classes. Each has its own combat skill. Choosing the class finishes the run.
 
-The vault has goblin salvage crews. The Silkspire Galleries have deep amber slimes, long-ranging spiders, and some very hungry prize chests. The Tithe Keep is guarded by armored skeletons and stone gargoyles. Each floor has a broadcast terminal that trades supplies for time on the collapse clock.
+The vault has goblin salvage crews. The Silkspire Galleries have deep amber slimes, long-ranging spiders, and some very hungry prize chests among the exhibit halls. The Tithe Keep is guarded by armored skeletons and stone gargoyles in its processional hall and barracks. Each floor has a broadcast terminal that trades supplies for time on the collapse clock.
 
 The expanded floors use a new checkpoint format. Choose **Replace slot** to start a new run in a slot occupied by an older save.
 

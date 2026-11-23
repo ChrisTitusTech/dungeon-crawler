@@ -38,8 +38,9 @@ func test_seed_repeats_and_rooms_stay_connected() -> void:
 				if markers.has(glyph):
 					markers[glyph] += 1
 		assert_eq(visited.size(), walkable, "Seed %d has a connected floor." % seed)
+		assert_gte(walkable, 3500, "The larger vault has more playable space, not just a larger border.")
 		assert_eq(markers, {"S": 1, "D": 1, "R": 1, ">": 1, "b": 1})
-		assert_eq(floor_state.size, Vector2i(118, 84))
+		assert_eq(floor_state.size, Vector2i(168, 118))
 		assert_eq(floor_state.terrain_at(layout.refuge_door), "D")
 		enemy_counts[floor_state.enemies.size()] = true
 	assert_gt(enemy_counts.size(), 1, "Seeds vary the number of encounters.")
@@ -268,10 +269,12 @@ func test_exit_requires_a_boss_victory_and_the_stairs() -> void:
 
 
 func test_later_floors_have_connected_routes_and_their_own_bosses() -> void:
+	var expected_walkable := {2: 870, 3: 1106}
 	for number: int in [2, 3]:
 		var run := CampaignRun.new(42, number)
 		var floor_state: DungeonFloor = run.floor
 		var visited: Dictionary = _reachable(floor_state)
+		assert_eq(visited.size(), expected_walkable[number], "The expanded floor is reachable from its entry.")
 		assert_true(visited.has(run.refuge_door))
 		assert_eq(floor_state.terrain_at(run.refuge_door), "D")
 		assert_true(visited.has(_find(floor_state, ">")))
