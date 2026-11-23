@@ -63,10 +63,15 @@ func test_controller_confirms_menus_without_reusing_a_as_interact() -> void:
 	assert_eq(floor_state.player, spawn + Vector2i.RIGHT)
 	floor_state.encounter = floor_state.enemy_at(_find(floor_state, "r"))
 	game._open_battle(DungeonFloor.EnemyKind.RAT)
+	var skill_button: Button = game._battle.get_node("%Skill")
 	_tap_pad(JOY_BUTTON_DPAD_RIGHT)
-	assert_eq(get_viewport().gui_get_focus_owner(), game._battle.get_node("%Skill"))
+	assert_eq(get_viewport().gui_get_focus_owner(), skill_button)
 	_tap_pad(JOY_BUTTON_A)
 	assert_true(game._battle.rules.used_skill)
+	game._battle._choose(BattleRules.Command.DEFEND)
+	game._battle._enemy_turn()
+	assert_eq(skill_button.text, "Hamstring (8 turns)")
+	assert_true(skill_button.disabled)
 	await wait_process_frames(1)
 
 
@@ -136,7 +141,7 @@ func test_show_rewards_gear_and_camp_treatment() -> void:
 	assert_eq(run.party[1].hp, 0)
 
 
-func test_skill_is_spent_and_injuries_affect_combat() -> void:
+func test_skill_cools_down_and_injuries_affect_combat() -> void:
 	var mira: BattleRules.Fighter = CampaignRun.CONTENT.make_fighter("mira")
 	var guard: BattleRules.Fighter = CampaignRun.CONTENT.make_fighter("guard")
 	var battle := BattleRules.new([mira], guard, 1)

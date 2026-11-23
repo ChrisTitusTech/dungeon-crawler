@@ -23,7 +23,6 @@ class Fighter:
 	var natural_armor: int
 	var injuries: Dictionary[String, bool] = {}
 	var skill: Dictionary
-	var skill_ready: bool
 	var wound: String
 	var entrance: String
 
@@ -67,6 +66,7 @@ class Fighter:
 
 
 const POTION_HEAL := 9
+const SKILL_COOLDOWN_TURNS := 10
 
 var party: Array[Fighter]
 var enemy: Fighter
@@ -78,6 +78,8 @@ var messages: PackedStringArray = []
 var _initiative: Array[Fighter]
 var _turn_index: int = 0
 var _enemy_actions: int = 0
+var _completed_turns: int = 0
+var _skill_ready_after: Dictionary[Fighter, int] = {}
 
 
 func _init(members: Array[Fighter], opponent: Fighter, supplies: int) -> void:
@@ -88,7 +90,6 @@ func _init(members: Array[Fighter], opponent: Fighter, supplies: int) -> void:
 	_initiative.append(enemy)
 	for fighter: Fighter in _initiative:
 		fighter.guarding = false
-		fighter.skill_ready = not fighter.skill.is_empty()
 	_turn_index = _initiative.size() - 1
 	_finish_action()
 	_log(enemy.entrance if not enemy.entrance.is_empty() else "%s blocks your path." % enemy.name)
@@ -120,7 +121,12 @@ func potion_target() -> Fighter:
 
 
 func can_use_skill(actor: Fighter) -> bool:
-	return actor != null and actor.skill_ready and skill_target(actor) != null
+	return (actor != null and not actor.skill.is_empty()
+		and skill_cooldown_remaining(actor) == 0 and skill_target(actor) != null)
+
+
+func skill_cooldown_remaining(actor: Fighter) -> int:
+	return maxi(0, _skill_ready_after.get(actor, 0) - _completed_turns)
 
 
 func skill_target(actor: Fighter) -> Fighter:
@@ -156,12 +162,14 @@ func use_command(command: Command) -> bool:
 			outcome = Outcome.FLED
 			_log("The party escapes.")
 			return true
+	_completed_turns += 1
 	_finish_action()
 	return true
 
 
 func _use_skill(actor: Fighter) -> void:
-	actor.skill_ready = false
+	# The cooldown starts after the turn spent using the skill.
+	_skill_ready_after[actor] = _completed_turns + 1 + SKILL_COOLDOWN_TURNS
 	used_skill = true
 	var skill: Dictionary = actor.skill
 	for hit: int in int(skill.get("hits", 1)):
@@ -188,6 +196,7 @@ func take_enemy_turn() -> void:
 		_enemy_actions += 1
 		var wound: String = enemy.wound if _enemy_actions % 2 == 0 else ""
 		_hit(enemy, target, 0, wound)
+		_completed_turns += 1
 		_finish_action()
 
 

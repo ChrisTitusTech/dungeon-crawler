@@ -202,8 +202,15 @@ func _render() -> void:
 	_attack.disabled = not can_act
 	_skill.visible = rules.party.any(func(member: BattleRules.Fighter) -> bool: return not member.skill.is_empty())
 	_skill.disabled = not can_act or not rules.can_use_skill(actor)
-	_skill.text = actor.skill.get("name", "Skill") if can_act else "Skill"
-	_skill.tooltip_text = actor.skill.get("name", "") + " · Once per fight" if can_act else ""
+	_skill.text = "Skill"
+	_skill.tooltip_text = ""
+	if can_act and not actor.skill.is_empty():
+		_skill.text = actor.skill.get("name", "Skill")
+		_skill.tooltip_text = "Ready again after %d combat turns." % BattleRules.SKILL_COOLDOWN_TURNS
+		var remaining: int = rules.skill_cooldown_remaining(actor)
+		if remaining > 0:
+			var turns: String = "1 turn" if remaining == 1 else "%d turns" % remaining
+			_skill.text += " (%s)" % turns
 	_defend.disabled = not can_act
 	_flee.disabled = not can_act
 	_item.disabled = not can_act or rules.potions == 0 or rules.potion_target() == null

@@ -74,7 +74,40 @@ func test_cleric_heals_the_most_injured_standing_ally() -> void:
 	assert_eq(foe.hp, foe.max_hp)
 	assert_eq(fallen.hp, 0)
 	assert_eq(battle.potions, 0)
-	assert_false(cleric.skill_ready)
+	assert_eq(battle.skill_cooldown_remaining(cleric), 10)
+
+
+func test_skills_recharge_independently_after_ten_completed_turns() -> void:
+	var mira: BattleRules.Fighter = CampaignRun.CONTENT.make_fighter("mira")
+	var sable: BattleRules.Fighter = CampaignRun.CONTENT.make_fighter("sable")
+	var foe := BattleRules.Fighter.new("Guard", 100, 1, 4)
+	var battle := BattleRules.new([mira, sable], foe, 0)
+
+	assert_true(battle.use_command(BattleRules.Command.SKILL))
+	assert_eq(battle.skill_cooldown_remaining(mira), 10)
+	assert_true(battle.use_command(BattleRules.Command.SKILL), "Sable can use her own skill while Mira's recharges.")
+	assert_eq(battle.skill_cooldown_remaining(mira), 9)
+	assert_eq(battle.skill_cooldown_remaining(sable), 10)
+	battle.take_enemy_turn()
+	assert_false(battle.use_command(BattleRules.Command.SKILL))
+	assert_false(battle.use_command(BattleRules.Command.ITEM))
+	assert_eq(battle.skill_cooldown_remaining(mira), 8, "Rejected commands do not advance combat.")
+
+	for remaining: int in range(7, -1, -1):
+		if battle.current_fighter() == foe:
+			battle.take_enemy_turn()
+		else:
+			assert_true(battle.use_command(BattleRules.Command.DEFEND))
+		assert_eq(battle.skill_cooldown_remaining(mira), remaining)
+		assert_eq(battle.skill_cooldown_remaining(sable), remaining + 1)
+		assert_eq(battle.can_use_skill(mira), remaining == 0)
+
+	battle.take_enemy_turn()
+	assert_same(battle.current_fighter(), mira)
+	assert_true(battle.use_command(BattleRules.Command.SKILL), "Mira can use Hamstring again in the same fight.")
+	assert_eq(battle.skill_cooldown_remaining(mira), 10)
+	var next_battle := BattleRules.new([mira, sable], BattleRules.Fighter.new("Rat", 20, 1, 4), 0)
+	assert_true(next_battle.can_use_skill(mira), "A new fight starts with the skill ready.")
 
 
 func test_fighter_skill_stops_at_the_killing_blow() -> void:
