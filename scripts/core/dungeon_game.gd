@@ -15,6 +15,7 @@ const NO_SITE := Vector2i(-1, -1)
 
 @export var prototype_mode: bool = false
 @export var save_directory: String = "user://"
+@export var accessibility_path: String = "user://accessibility.cfg"
 
 @onready var _dungeon: DungeonView = $Dungeon
 @onready var _interface: CanvasLayer = $Interface
@@ -45,13 +46,16 @@ var _run: CampaignRun
 var _menu: CampaignMenu
 var _slot: int
 var _checkpoint: Dictionary
-var _can_close_menu: bool
+var _menu_back: Callable
 var _queued_move: Vector2i = NO_SITE
 var _queued_use: bool
 var _held_action: StringName
 var _repeat: float
 var _last_clock_usec: int = Time.get_ticks_usec()
 var _quitting: bool
+var _reduced_motion: bool
+var _single_step: bool
+var _using_gamepad: bool
 
 
 func _ready() -> void:
@@ -59,6 +63,7 @@ func _ready() -> void:
 		get_tree().auto_accept_quit = false
 	_dungeon.movement_finished.connect(_on_movement_finished)
 	_fade.finished.connect(_resume_scene_controls)
+	_load_accessibility()
 	_wait_button.pressed.connect(_take_turn.bind(Vector2i.ZERO))
 	_map_button.pressed.connect(_toggle_minimap)
 	if prototype_mode or "--prototype" in OS.get_cmdline_user_args():
@@ -102,22 +107,9 @@ func _process(delta: float) -> void:
 	if not _can_explore():
 		_held_action = &""
 		return
+	if _single_step:
+		return
 
-	if _run != null:
-		if Input.is_action_just_pressed(&"interact"):
-			_interact()
-			return
-		if Input.is_action_just_pressed(&"open_party"):
-			_show_party()
-			return
-		if Input.is_action_just_pressed(&"open_inventory"):
-			_show_inventory()
-			return
-		if Input.is_action_just_pressed(&"pause"):
-			_show_pause()
-			return
-	if Input.is_action_just_pressed(&"toggle_minimap"):
-		_toggle_minimap()
 	var pressed: StringName
 	for action: StringName in MOVEMENT:
 		if Input.is_action_just_pressed(action):
@@ -129,9 +121,6 @@ func _process(delta: float) -> void:
 			pressed = action
 	if _held_action != &"" and Input.is_action_pressed(_held_action):
 		pressed = _held_action
-	if Input.is_action_just_pressed(&"wait_turn"):
-		_take_turn(Vector2i.ZERO)
-		return
 	if pressed != _held_action:
 		_held_action = pressed
 		_repeat = 0.0
@@ -162,18 +151,63 @@ func _update_floor_clock(elapsed: float) -> void:
 		_prompt_reload("The floor collapsed", "The last safe-room checkpoint is intact.")
 
 
+func _input(event: InputEvent) -> void:
+	if _fade.busy:
+		get_viewport().set_input_as_handled()
+		return
+	var gamepad: bool = (event is InputEventJoypadButton and event.pressed
+		or event is InputEventJoypadMotion and absf(event.axis_value) > 0.5)
+	var keyboard_or_mouse: bool = (event is InputEventKey or event is InputEventMouseButton) and event.pressed
+	if not (gamepad or keyboard_or_mouse) or gamepad == _using_gamepad:
+		return
+	_using_gamepad = gamepad
+	_interact_button.text = "Use [A]" if gamepad else "Use [E]"
+	_party_button.text = "Party [Y]" if gamepad else "Party [C]"
+	_inventory_button.text = "Pack [X]" if gamepad else "Pack [I]"
+	_wait_button.text = "Wait [RB]" if gamepad else "Wait [Q]"
+	_map_button.text = "Map [View]" if gamepad else "Map [M]"
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if _fade.busy:
 		return
-	if _menu != null and _menu.visible and _can_close_menu and event.is_action_pressed(&"ui_cancel"):
-		_hide_menu()
-		get_viewport().set_input_as_handled()
-		return
-	if _can_explore() and event is InputEventMouseButton and event.is_action_pressed(&"select_tile"):
-		var direction: Vector2i = _dungeon.cell_at_screen_position(event.position) - _floor.player
-		if absi(direction.x) + absi(direction.y) == 1:
-			_take_turn(direction)
+	if _menu != null and _menu.visible:
+		if _menu_back.is_valid() and event.is_action_pressed(&"ui_cancel"):
 			get_viewport().set_input_as_handled()
+			_menu_back.call()
+		return
+	if not _can_explore():
+		return
+	if _run != null and event.is_action_pressed(&"interact"):
+		_interact()
+	elif _run != null and event.is_action_pressed(&"open_party"):
+		_show_party()
+	elif _run != null and event.is_action_pressed(&"open_inventory"):
+		_show_inventory()
+	elif _run != null and event.is_action_pressed(&"pause"):
+		_show_pause()
+	elif event.is_action_pressed(&"toggle_minimap"):
+		_toggle_minimap()
+	elif event.is_action_pressed(&"wait_turn"):
+		_take_turn(Vector2i.ZERO)
+	elif event is InputEventMouseButton and event.is_action_pressed(&"select_tile"):
+		var direction: Vector2i = _dungeon.cell_at_screen_position(event.position) - _floor.player
+		if absi(direction.x) + absi(direction.y) != 1:
+			return
+		_take_turn(direction)
+	elif _single_step:
+		for action: StringName in MOVEMENT:
+			if not event.is_action_pressed(action):
+				continue
+			if event is InputEventJoypadMotion and not Input.is_action_just_pressed_by_event(action, event):
+				continue
+			_take_turn(MOVEMENT[action])
+			get_viewport().set_input_as_handled()
+			break
+		return
+	else:
+		return
+	get_viewport().set_input_as_handled()
 
 
 func _can_explore() -> bool:
@@ -254,6 +288,7 @@ func _begin_battle(enemy_kind: DungeonFloor.EnemyKind) -> void:
 			DungeonFloor.EnemyKind.GUARD:
 				opponent = BattleRules.Fighter.new(enemy_name, 25, 7, 11)
 	_battle = BATTLE_SCREEN.instantiate() as BattleView
+	_battle.reduced_motion = _reduced_motion
 	_hud.hide()
 	_dungeon.hide()
 	_interface.add_child(_battle)
@@ -345,6 +380,8 @@ func _show_slots(message: String = "Choose a save slot to enter Floor 1.") -> vo
 		else:
 			choices.append(CampaignMenu.choice("Slot %d · New run" % slot, _new_slot.bind(slot)))
 	choices.append(CampaignMenu.choice("Audio settings", _show_audio_settings))
+	choices.append(CampaignMenu.choice("Accessibility", _show_accessibility))
+	choices.append(CampaignMenu.choice("Quit game", _quit))
 	_present("Dungeon Crawler", message, choices, false)
 
 
@@ -352,7 +389,7 @@ func _confirm_replace(slot: int) -> void:
 	_present("Replace slot %d?" % slot, "A new run replaces this slot’s checkpoint.", [
 		CampaignMenu.choice("Keep checkpoint", _show_slots),
 		CampaignMenu.choice("Start a new run", _new_slot.bind(slot)),
-	], false)
+	], false, _show_slots)
 
 
 func _new_slot(slot: int) -> void:
@@ -788,7 +825,7 @@ func _choose_item_target(item: String) -> void:
 		choices.append(CampaignMenu.choice("%s · %d/%d HP" % [member.name, member.hp, member.max_hp],
 			_apply_item.bind(member, item), disabled))
 	choices.append(CampaignMenu.choice("Back to pack", _show_inventory))
-	_present(definition.name, definition.description, choices)
+	_present(definition.name, definition.description, choices, true, _show_inventory)
 
 
 func _apply_item(member: BattleRules.Fighter, item: String) -> void:
@@ -834,7 +871,7 @@ func _show_training(member: BattleRules.Fighter) -> void:
 		CampaignMenu.choice("Speed +1", _train.bind(member, "speed")),
 		CampaignMenu.choice("Max HP +4", _train.bind(member, "health")),
 		CampaignMenu.choice("Back to party", _show_party),
-	])
+	], true, _show_party)
 
 
 func _train(member: BattleRules.Fighter, stat: String) -> void:
@@ -847,21 +884,65 @@ func _show_pause() -> void:
 	_present("Paused", "Use the safe room to record progress. Returning to the slot menu ends this session.", [
 		CampaignMenu.choice("Resume", _hide_menu),
 		CampaignMenu.choice("Audio settings", _show_audio_settings.bind(true)),
+		CampaignMenu.choice("Accessibility", _show_accessibility.bind(true)),
 		CampaignMenu.choice("Return to save slots", _show_slots),
 	])
 
 
 func _show_audio_settings(from_pause: bool = false) -> void:
+	var back: Callable = _show_pause if from_pause else _show_slots
 	_present("Audio settings", "Select a volume to cycle the level. Changes apply immediately.", [
 		CampaignMenu.choice("Music volume · %d%%" % _audio.music_volume, _change_volume.bind(true, from_pause)),
 		CampaignMenu.choice("Effects volume · %d%%" % _audio.effects_volume, _change_volume.bind(false, from_pause)),
-		CampaignMenu.choice("Back", _show_pause if from_pause else _show_slots),
-	], false)
+		CampaignMenu.choice("Back", back),
+	], true, back)
 
 
 func _change_volume(music: bool, from_pause: bool) -> void:
 	_audio.cycle_volume(music)
 	_show_audio_settings(from_pause)
+
+
+func _load_accessibility() -> void:
+	var settings := ConfigFile.new()
+	if settings.load(accessibility_path) == OK:
+		_reduced_motion = settings.get_value("accessibility", "reduced_motion", false) == true
+		_single_step = settings.get_value("accessibility", "single_step", false) == true
+	_apply_accessibility()
+
+
+func _apply_accessibility() -> void:
+	_dungeon.reduced_motion = _reduced_motion
+	_fade.reduced_motion = _reduced_motion
+	_held_action = &""
+
+
+func _show_accessibility(from_pause: bool = false, notice: String = "") -> void:
+	var back: Callable = _show_pause if from_pause else _show_slots
+	var detail := "Reduced motion skips scene fades, camera slides, and combat motion effects. One tile per press turns off held movement."
+	if not notice.is_empty():
+		detail += "\n\n" + notice
+	_present("Accessibility", detail, [
+		CampaignMenu.choice("Reduced motion · %s" % ("On" if _reduced_motion else "Off"),
+			_toggle_accessibility.bind(true, from_pause)),
+		CampaignMenu.choice("One tile per press · %s" % ("On" if _single_step else "Off"),
+			_toggle_accessibility.bind(false, from_pause)),
+		CampaignMenu.choice("Back", back),
+	], true, back)
+
+
+func _toggle_accessibility(motion: bool, from_pause: bool) -> void:
+	if motion:
+		_reduced_motion = not _reduced_motion
+	else:
+		_single_step = not _single_step
+	_apply_accessibility()
+	var settings := ConfigFile.new()
+	settings.set_value("accessibility", "reduced_motion", _reduced_motion)
+	settings.set_value("accessibility", "single_step", _single_step)
+	var error: Error = settings.save(accessibility_path)
+	var notice: String = "" if error == OK else "Settings applied for this session. Could not save them."
+	_show_accessibility(from_pause, notice)
 
 
 func _show_summary(notice: String = "") -> void:
@@ -881,8 +962,9 @@ func _rook_identity() -> String:
 	return "%s · %s" % [race, role]
 
 
-func _present(title: String, detail: String, choices: Array[Dictionary], dismissible: bool = true) -> void:
-	_can_close_menu = dismissible
+func _present(title: String, detail: String, choices: Array[Dictionary], dismissible: bool = true,
+	back: Callable = Callable()) -> void:
+	_menu_back = back if back.is_valid() or not dismissible else _hide_menu
 	_menu.present(title, detail, choices)
 
 

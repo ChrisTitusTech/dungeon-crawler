@@ -16,6 +16,68 @@ func after_each() -> void:
 	DirAccess.remove_absolute(_directory)
 
 
+func test_controller_confirms_menus_without_reusing_a_as_interact() -> void:
+	var game: DungeonGame = GAME.instantiate() as DungeonGame
+	game.save_directory = _directory
+	game.accessibility_path = _directory.path_join("accessibility.cfg")
+	add_child_autofree(game)
+	await wait_process_frames(1)
+
+	_tap_pad(JOY_BUTTON_A)
+	await wait_process_frames(1)
+	assert_not_null(game._run)
+	if game._run == null:
+		return
+	assert_false(game._run.at_camp(), "Selecting a slot must not also open the dungeon door.")
+	assert_eq(game._interact_button.text, "Use [A]")
+	_tap_pad(JOY_BUTTON_A)
+	assert_true(game._run.at_camp(), "A fresh press uses the door.")
+
+	_tap_pad(JOY_BUTTON_START)
+	var heading: Label = game._menu.get_node("%Heading")
+	assert_eq(heading.text, "Paused")
+	_tap_pad(JOY_BUTTON_DPAD_DOWN)
+	_tap_pad(JOY_BUTTON_DPAD_DOWN)
+	_tap_pad(JOY_BUTTON_A)
+	assert_eq(heading.text, "Accessibility")
+	_tap_pad(JOY_BUTTON_A)
+	_tap_pad(JOY_BUTTON_DPAD_DOWN)
+	_tap_pad(JOY_BUTTON_A)
+	assert_true(game._dungeon.reduced_motion)
+	assert_true(game._single_step)
+	_tap_pad(JOY_BUTTON_B)
+	assert_eq(heading.text, "Paused")
+	_tap_pad(JOY_BUTTON_B)
+	assert_false(game._menu.visible)
+
+	game._reduced_motion = false
+	game._single_step = false
+	game._load_accessibility()
+	assert_true(game._fade.reduced_motion)
+	assert_true(game._single_step)
+
+	game._leave_refuge()
+	var floor_state: DungeonFloor = game._run.floor
+	var spawn: Vector2i = floor_state.player
+	_tap_pad(JOY_BUTTON_DPAD_RIGHT)
+	assert_eq(floor_state.player, spawn + Vector2i.RIGHT)
+	floor_state.encounter = floor_state.enemy_at(_find(floor_state, "r"))
+	game._open_battle(DungeonFloor.EnemyKind.RAT)
+	_tap_pad(JOY_BUTTON_DPAD_RIGHT)
+	assert_eq(get_viewport().gui_get_focus_owner(), game._battle.get_node("%Skill"))
+	_tap_pad(JOY_BUTTON_A)
+	assert_true(game._battle.rules.used_skill)
+	await wait_process_frames(1)
+
+
+func _tap_pad(button: JoyButton) -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventJoypadButton.new()
+		event.button_index = button
+		event.pressed = pressed
+		get_viewport().push_input(event)
+
+
 func test_seed_repeats_and_rooms_stay_connected() -> void:
 	var generator := FloorOneGenerator.new()
 	var layout: DungeonLayout = generator.generate(73)

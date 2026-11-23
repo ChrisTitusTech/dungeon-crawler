@@ -24,6 +24,14 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
 [input]
 
+ui_accept={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"keycode":4194309), Object(InputEventKey,"keycode":4194310), Object(InputEventKey,"keycode":32), Object(InputEventJoypadButton,"button_index":0)]
+}
+ui_cancel={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"keycode":4194305), Object(InputEventJoypadButton,"button_index":1)]
+}
 move_up={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"physical_keycode":87), Object(InputEventKey,"keycode":4194320), Object(InputEventJoypadButton,"button_index":11), Object(InputEventJoypadMotion,"axis":1,"axis_value":-1.0)]

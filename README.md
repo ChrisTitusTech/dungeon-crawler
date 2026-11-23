@@ -45,14 +45,15 @@ The expanded floors use a new checkpoint format. Choose **Replace slot** to star
 | Open party and training | C | Y | Party button |
 | Open inventory | I | X | Pack button |
 | Toggle minimap | M | Back / View | Map button |
-| Choose a battle command | Arrow keys and Enter | D-pad and A | Click a command |
-| Pause | P | Start / Menu | |
+| Navigate and confirm in menus or battles | Arrow keys and Enter | D-pad or left stick, then A | Click a choice |
+| Go back in menus | Escape | B | Back button |
+| Pause exploration | P | Start / Menu | |
 
 Movement follows the diagonal tile edges of the isometric view. Hold a direction for continuous movement. Battles place the party on the right and the enemy on the left in a torchlit vault.
 
 The game opens in a 1280×720 window. Exploration uses drawn stonework and articulated characters, and battles use a 1672×941 arena backdrop. Heroes, pets, and monsters animate in both views.
 
-The save-slot and pause menus offer separate music and effects volume controls.
+The save-slot and pause menus offer separate music and effects volume controls and two accessibility options. **Reduced motion** skips scene fades, camera slides, and animated battle feedback. **One tile per press** turns off held movement. Both options apply immediately and are saved between sessions.
 
 Fleeing leaves the enemy on the map and gives the party one turn to move away. To revisit the original hand-built prototype, run `godot --path . -- --prototype`.
 

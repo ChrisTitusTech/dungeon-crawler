@@ -35,6 +35,7 @@ var _audio: DungeonAudio
 var _controls_held: bool
 var _animating: bool
 var _result_cue_played: bool
+var reduced_motion: bool
 
 
 func _ready() -> void:
@@ -54,6 +55,8 @@ func start(battle: BattleRules, enemy_kind: DungeonFloor.EnemyKind, uses_checkpo
 	_audio = audio
 	_controls_held = hold_controls
 	_backdrop.modulate = ARENA_TINTS[floor_number - 1]
+	if reduced_motion:
+		_backdrop.material = null
 	for index: int in rules.party.size():
 		var fighter: BattleRules.Fighter = rules.party[index]
 		var model: String = ActorArt.model(fighter, "rook" if index == 0 else "mira")
@@ -86,6 +89,7 @@ func show_floor_clock(remaining: String) -> void:
 
 func _add_card(model: String, slot: Vector2, sprite_size: float, opposing: bool) -> BattleFighterView:
 	var card: BattleFighterView = FIGHTER_CARD.instantiate() as BattleFighterView
+	card.reduced_motion = reduced_motion
 	_battlefield.add_child(card)
 	card.set_anchor_and_offset(SIDE_RIGHT, slot.x, 0.0)
 	card.set_anchor_and_offset(SIDE_BOTTOM, slot.y, 0.0)
@@ -131,6 +135,11 @@ func _finish() -> void:
 func _present_action(command: BattleRules.Command, actor: BattleRules.Fighter,
 	target: BattleRules.Fighter, previous_hp: int) -> void:
 	if DisplayServer.get_name() == "headless":
+		_render()
+		return
+	if reduced_motion:
+		if _audio != null:
+			_audio.play_cue(ACTION_CUES[command])
 		_render()
 		return
 	_animating = true
@@ -219,6 +228,11 @@ func _render() -> void:
 	elif not can_act:
 		_enemy_delay.start()
 	else:
+		var enabled: Array[Button] = []
+		for button: Button in [_attack, _skill, _defend, _item, _flee]:
+			if button.visible and not button.disabled:
+				enabled.append(button)
+		CampaignMenu.link_buttons(enabled, false)
 		var focused: Button = get_viewport().gui_get_focus_owner() as Button
-		if focused == null or focused.disabled:
+		if focused not in enabled:
 			_attack.grab_focus()

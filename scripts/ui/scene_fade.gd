@@ -7,12 +7,13 @@ const INK := Color("#10151f")
 const ENCOUNTER_INK := Color("#20283b")
 
 var busy: bool = false
+var reduced_motion: bool
 
 
 func change_scene(swap: Callable, encounter: bool = false) -> void:
 	if busy:
 		return
-	if DisplayServer.get_name() == "headless":
+	if reduced_motion or DisplayServer.get_name() == "headless":
 		swap.call()
 		finished.emit()
 		return

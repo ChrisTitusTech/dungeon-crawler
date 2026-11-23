@@ -35,6 +35,7 @@ var _stone_color: Color = STONE_COLORS[0]
 var _torch_glow: GradientTexture2D
 var _ambient_frame: int
 var _party_facing: float = 1.0
+var reduced_motion: bool
 var _clash_turn: int = -1
 var _clash_started: float
 
@@ -89,7 +90,7 @@ func refresh(animate: bool = false) -> bool:
 			moving = moving or _visible_cells.has(enemy.cell) or _previous_visibility.has(_enemy_from[enemy])
 
 	_refresh_tiles()
-	if animate and moving and DisplayServer.get_name() != "headless":
+	if animate and moving and not reduced_motion and DisplayServer.get_name() != "headless":
 		_moving = true
 		_set_step_progress(0.0)
 		return true
@@ -154,7 +155,8 @@ func _set_step_progress(progress: float) -> void:
 func _process(delta: float) -> void:
 	if _floor == null or not is_visible_in_tree() or DisplayServer.get_name() == "headless":
 		return
-	_ambient_time += delta
+	if not reduced_motion:
+		_ambient_time += delta
 	if _moving:
 		var progress: float = _step_progress + delta / STEP_TIME
 		_set_step_progress(minf(progress, 1.0))
@@ -211,7 +213,7 @@ func _draw() -> void:
 
 
 func _draw_skirmish() -> void:
-	if _floor.skirmish.is_empty() or _clash_turn != _floor.turn:
+	if reduced_motion or _floor.skirmish.is_empty() or _clash_turn != _floor.turn:
 		return
 	var progress: float = (_ambient_time - _clash_started) / 0.35
 	if progress >= 1.0:

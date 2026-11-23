@@ -27,6 +27,7 @@ var _pose_tween: Tween
 var _health_tween: Tween
 var _health_ready: bool
 var _reaction_tween: Tween
+var reduced_motion: bool
 
 
 func show_fighter(fighter: BattleRules.Fighter, is_active: bool, accent: Color) -> void:
@@ -38,7 +39,7 @@ func show_fighter(fighter: BattleRules.Fighter, is_active: bool, accent: Color) 
 	elif not fighter.injuries.is_empty():
 		_hp_label.text += " · Injured"
 	_hp_bar.max_value = float(fighter.max_hp)
-	if not _health_ready or DisplayServer.get_name() == "headless":
+	if reduced_motion or not _health_ready or DisplayServer.get_name() == "headless":
 		_hp_bar.value = float(fighter.hp)
 	elif absf(_hp_bar.value - fighter.hp) > 0.01:
 		if _health_tween != null and _health_tween.is_valid():
@@ -47,7 +48,7 @@ func show_fighter(fighter: BattleRules.Fighter, is_active: bool, accent: Color) 
 		_health_tween.tween_property(_hp_bar, "value", float(fighter.hp), 0.20)
 	if fighter.hp == 0 and _alive:
 		_fall = 1.0
-		if _health_ready and DisplayServer.get_name() != "headless":
+		if not reduced_motion and _health_ready and DisplayServer.get_name() != "headless":
 			_fall = 0.0
 			var defeat: Tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 			defeat.tween_property(self, "_fall", 1.0, 0.36)
@@ -72,7 +73,7 @@ func set_model(model: String, opposing: bool, sprite_size: float) -> void:
 
 
 func _process(delta: float) -> void:
-	if not is_visible_in_tree() or DisplayServer.get_name() == "headless":
+	if reduced_motion or not is_visible_in_tree() or DisplayServer.get_name() == "headless":
 		return
 	if _alive:
 		_elapsed += delta
