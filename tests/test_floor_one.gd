@@ -103,6 +103,14 @@ func test_equipment_screen_swaps_gear_and_saves_slot_changes() -> void:
 	assert_true(equipment.visible)
 	assert_false(game._can_explore(), "The equipment screen blocks world movement.")
 	assert_same(equipment._member, rook)
+	await wait_process_frames(2)
+	_assert_equipment_tile_layout(equipment._weapon, "Weapon")
+	_assert_equipment_tile_layout(equipment._armor, "Chest armor")
+	for cell: Button in equipment._grid.get_children():
+		if cell.has_meta("item"):
+			_assert_equipment_tile_layout(cell, "×%d" % game._run.count(cell.get_meta("item")))
+		else:
+			assert_eq(cell.get_child_count(), 0, "Empty pack cells stay blank.")
 	(equipment._members.get_child(1) as Button).pressed.emit()
 	assert_same(equipment._member, game._run.party[1])
 	(equipment._members.get_child(0) as Button).pressed.emit()
@@ -153,6 +161,19 @@ func _equipment_item_button(equipment: EquipmentView, item: String) -> Button:
 		if button.has_meta("item") and button.get_meta("item") == item:
 			return button
 	return null
+
+
+func _assert_equipment_tile_layout(button: Button, caption: String) -> void:
+	var tile: Rect2 = button.get_global_rect()
+	var icon: Control = button.get_node("TileContent/Icon")
+	var label: Label = button.get_node("TileContent/Caption")
+	var icon_rect: Rect2 = icon.get_global_rect()
+	var label_rect: Rect2 = label.get_global_rect()
+	assert_eq(label.text, caption)
+	assert_true(tile.encloses(icon_rect) and tile.encloses(label_rect), caption + " fits inside its tile.")
+	assert_almost_eq(icon_rect.get_center().x, tile.get_center().x, 1.0, caption + " icon is centered.")
+	assert_almost_eq(label_rect.get_center().x, tile.get_center().x, 1.0, caption + " label is centered.")
+	assert_lt(icon_rect.end.y, label_rect.position.y, caption + " appears below its icon.")
 
 
 func test_seed_repeats_and_rooms_stay_connected() -> void:

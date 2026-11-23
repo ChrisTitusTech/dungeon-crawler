@@ -118,22 +118,27 @@ func _new_cell() -> Button:
 
 
 func _add_tile_content(button: Button, icon: GearIcon, caption: String) -> void:
+	var content := VBoxContainer.new()
+	content.name = "TileContent"
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_theme_constant_override("separation", 2)
+	button.add_child(content)
+	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	icon.name = "Icon"
+	icon.custom_minimum_size = Vector2(24, 24)
+	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(icon)
+
 	var label := Label.new()
+	label.name = "Caption"
 	label.text = caption
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.add_theme_font_size_override("font_size", 10)
-	button.add_child(icon)
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var icon_top: float = 8.0 if button == _weapon or button == _armor else 3.0
-	icon.set_anchor_and_offset(SIDE_LEFT, 0.5, -12)
-	icon.set_anchor_and_offset(SIDE_RIGHT, 0.5, 12)
-	icon.offset_top = icon_top
-	icon.offset_bottom = icon_top + 24
-	button.add_child(label)
-	label.set_anchor_and_offset(SIDE_RIGHT, 1.0, 0)
-	label.set_anchor_and_offset(SIDE_TOP, 1.0, -16)
-	label.set_anchor_and_offset(SIDE_BOTTOM, 1.0, -2)
+	content.add_child(label)
 
 
 func _clear(container: Container) -> void:
@@ -158,7 +163,8 @@ func _update_character() -> void:
 		var item: String = _equipped(slot)
 		var definition: Dictionary = CampaignRun.CONTENT.items.get(item, {})
 		button.tooltip_text = "%s · %s" % [SLOT_NAMES[slot], definition.get("name", "Empty")]
-		(button.get_child(0) as GearIcon).modulate.a = 0.4 if item.is_empty() else 1.0
+		var icon: GearIcon = button.get_node("TileContent/Icon")
+		icon.modulate.a = 0.4 if item.is_empty() else 1.0
 	_stats.text = "Lv %d   ·   %d ATK   ·   %d Armor" % [_member.level, _member.attack_power(),
 		_member.armor_bonus + _member.natural_armor]
 	if _member.is_pet or _member.hp == 0:
